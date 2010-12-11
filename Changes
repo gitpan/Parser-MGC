@@ -1,4 +1,13 @@
 Revision history for Parser-MGC
 
+0.02    CHANGES:
+         * ->expect now returns the consumed string
+         * ->token_int recognises negative integers
+         * ->token_* raises a failure at end-of-scope, rather than returning
+           undef
+
+        BUGFIXES:
+         * 'use overload fallback' to keep Test::More 0.96 happy
+
 0.01    First version, released on an unsuspecting world.
 

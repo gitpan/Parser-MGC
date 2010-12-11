@@ -117,8 +117,8 @@ STRUCTURE-FORMING METHODS
     whatever the code reference returned.
 
     While the code is being executed, the $stop pattern will be used by the
-    token parsing methods as an end-of-scope marker; causing them to return
-    "undef".
+    token parsing methods as an end-of-scope marker; causing them to raise a
+    failure if called at the end of a scope.
 
   $ret = $parser->list_of( $sep, $code )
     Expects to find a list of instances of something parsed by $code,
@@ -161,17 +161,15 @@ TOKEN PARSING METHODS
     The following methods attempt to consume some part of the input string,
     to be used as part of the parsing process.
 
-    As a convenience for parsing, each of these methods will return undef if
-    the string is already at the end (if "at_eos" returns true).
-
   $parser->expect( $string )
   $parser->expect( qr/pattern/ )
     Expects to find a literal string or regexp pattern match, and consumes
-    it. This method does not return a useful value.
+    it. This method returns the string that was captured.
 
   $int = $parser->token_int
     Expects to find an integer in decimal, octal or hexadecimal notation,
-    and consumes it.
+    and consumes it. Negative integers, preceeded by "-", are also
+    recognised.
 
   $str = $parser->token_string
     Expects to find a quoted string, and consumes it. The string should be

@@ -8,7 +8,7 @@ package Parser::MGC;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use Carp;
 
@@ -303,8 +303,8 @@ C<$code> reference, then expects to find the C<$stop> pattern. Returns
 whatever the code reference returned.
 
 While the code is being executed, the C<$stop> pattern will be used by the
-token parsing methods as an end-of-scope marker; causing them to return
-C<undef>.
+token parsing methods as an end-of-scope marker; causing them to raise a
+failure if called at the end of a scope.
 
 =cut
 
@@ -395,7 +395,7 @@ sub one_of
       local $self->{committer} = sub { $committed++ };
 
       my $ret;
-      $ret = eval { shift->( $self ) } and return $ret;
+      eval { $ret = shift->( $self ); 1 } and return $ret;
       my $e = $@;
 
       pos( $self->{str} ) = $pos;
@@ -437,9 +437,6 @@ sub commit
 The following methods attempt to consume some part of the input string, to be
 used as part of the parsing process.
 
-As a convenience for parsing, each of these methods will return undef if the
-string is already at the end (if C<at_eos> returns true).
-
 =cut
 
 sub skip_ws
@@ -458,7 +455,7 @@ sub skip_ws
 =head2 $parser->expect( qr/pattern/ )
 
 Expects to find a literal string or regexp pattern match, and consumes it.
-This method does not return a useful value.
+This method returns the string that was captured.
 
 =cut
 
@@ -470,14 +467,16 @@ sub expect
    ref $expect or $expect = qr/\Q$expect/;
 
    $self->skip_ws;
-   $self->{str} =~ m/\G$expect/gc or
+   $self->{str} =~ m/\G($expect)/gc or
       $self->fail( "Expected $expect" );
+
+   return $1;
 }
 
 =head2 $int = $parser->token_int
 
 Expects to find an integer in decimal, octal or hexadecimal notation, and
-consumes it.
+consumes it. Negative integers, preceeded by C<->, are also recognised.
 
 =cut
 
@@ -485,15 +484,16 @@ sub token_int
 {
    my $self = shift;
 
-   return undef if $self->at_eos;
+   $self->fail( "Expected integer" ) if $self->at_eos;
 
-   $self->{str} =~ m/\G(0x[[:xdigit:]]+|[[:digit:]]+)/gc or
+   $self->{str} =~ m/\G(-?)(0x[[:xdigit:]]+|[[:digit:]]+)/gc or
       $self->fail( "Expected integer" );
 
-   my $int = $1;
+   my $sign = $1 ? -1 : 1;
+   my $int = $2;
 
-   return oct $int if $int =~ m/^0/;
-   return $int;
+   return $sign * oct $int if $int =~ m/^0/;
+   return $sign * $int;
 }
 
 =head2 $str = $parser->token_string
@@ -507,7 +507,7 @@ sub token_string
 {
    my $self = shift;
 
-   return undef if $self->at_eos;
+   $self->fail( "Expected string" ) if $self->at_eos;
 
    my $pos = pos $self->{str};
 
@@ -536,7 +536,7 @@ sub token_ident
 {
    my $self = shift;
 
-   return undef if $self->at_eos;
+   $self->fail( "Expected identifier" ) if $self->at_eos;
 
    $self->{str} =~ m/\G($self->{patterns}{ident})/gc or
       $self->fail( "Expected identifier" );
@@ -589,6 +589,9 @@ sub STRING
           "$self->{text}\n" . 
           ( " " x $self->{col} . "^" ) . "\n";
 }
+
+# Provide fallback operators for cmp, eq, etc...
+use overload fallback => 1;
 
 # Keep perl happy; keep Britain tidy
 1;

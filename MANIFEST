@@ -1,5 +1,6 @@
 Build.PL
 Changes
+examples/eval-expr.pl
 lib/Parser/MGC.pm
 LICENSE
 Makefile.PL
