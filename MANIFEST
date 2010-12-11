@@ -1,0 +1,24 @@
+Build.PL
+Changes
+lib/Parser/MGC.pm
+LICENSE
+Makefile.PL
+MANIFEST			This list of files
+META.yml
+README
+t/00use.t
+t/01base.t
+t/02expect.t
+t/03where.t
+t/04comment.t
+t/10token_int.t
+t/11token_string.t
+t/12token_ident.t
+t/13token_kw.t
+t/20maybe.t
+t/21scope_of.t
+t/22list_of.t
+t/23sequence_of.t
+t/24one_of.t
+t/30commit.t
+t/99pod.t

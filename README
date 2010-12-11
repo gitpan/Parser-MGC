@@ -1,0 +1,194 @@
+NAME
+    "Parser::MGC" - build simple recursive-descent parsers
+
+SYNOPSIS
+     package My::Grammar::Parser
+     use base qw( Parser::MGC );
+
+     sub parse
+     {
+        my $self = shift;
+
+        $self->sequence_of( sub {
+           $self->one_of(
+              sub { $self->token_int },
+              sub { $self->token_string },
+              sub { \$self->token_ident },
+              sub { $self->scope_of( "(", \&parse, ")" ) }
+           );
+        } );
+     }
+
+     my $parser = My::Grammar::Parser->new;
+
+     my $tree = $parser->from_file( $ARGV[0] );
+
+     ...
+
+DESCRIPTION
+    This base class provides a low-level framework for building
+    recursive-descent parsers that consume a given input string from left to
+    right, returning a parse structure. It takes its name from the "m//gc"
+    regexps used to implement the token parsing behaviour.
+
+    It provides a number of token-parsing methods, which each atomically
+    extract a grammatical token from the string. It also provides wrapping
+    methods that can be used to build up a possibly-recursive grammar
+    structure. Each method, both token and structural, atomically either
+    consumes a prefix of the string and returns its result, or fails and
+    consumes nothing.
+
+CONSTRUCTOR
+  $parser = Parser::MGC->new( %args )
+    Returns a new instance of a "Parser::MGC" object. This must be called on
+    a subclass that provides a "parse" method.
+
+    Takes the following named arguments
+
+    patterns => HASH
+            Keys in this hash should map to quoted regexp ("qr//")
+            references, to override the default patterns used to match
+            tokens. See "PATTERNS" below
+
+PATTERNS
+    The following pattern names are recognised. They may be passed to the
+    constructor in the "patterns" hash, or provided as a class method under
+    the name "pattern_*name*".
+
+    *   ws
+
+        Pattern used to skip whitespace between tokens. Defaults to
+        "/[\s\n\t]+/"
+
+    *   comment
+
+        Pattern used to skip comments between tokens. Undefined by default.
+
+    *   ident
+
+        Pattern used to parse an identifier by "token_ident". Defaults to
+        "/[[:alpha:]_]\w*/"
+
+    *   string_delim
+
+        Pattern used to delimit a string by "token_string". Defaults to
+        "/["']/".
+
+METHODS
+  $result = $parser->from_string( $str )
+    Parse the given literal string and return the result from the "parse"
+    method.
+
+  $result = $parser->from_file( $file )
+    Parse the given file, which may be a pathname in a string, or an opened
+    IO handle, and return the result from the "parse" method.
+
+  ( $lineno, $col, $text ) = $parser->where
+    Returns the current parse position, as a line and column number, and the
+    entire current line of text. The first line is numbered 1, and the first
+    column is numbered 0.
+
+  $parser->fail( $message )
+    Aborts the current parse attempt with the given message string. The
+    failure message will include the current line and column position, and
+    will include the line of input that failed.
+
+  $eos = $parser->at_eos
+    Returns true if the input string is at the end of the string.
+
+STRUCTURE-FORMING METHODS
+    The following methods may be used to build a grammatical structure out
+    of the defined basic token-parsing methods. Each takes at least one code
+    reference, which will be passed the actual $parser object as its first
+    argument.
+
+  $ret = $parser->maybe( $code )
+    Attempts to execute the given $code reference in scalar context, passing
+    in no arguments, and returning what it returned. If the code fails to
+    parse by calling the "fail" method then none of the input string will be
+    consumed; the current parsing position will be restored. "undef" will be
+    returned in this case.
+
+    This may be considered to be similar to the "?" regexp qualifier.
+
+  $ret = $parser->scope_of( $start, $code, $stop )
+    Expects to find the $start pattern, then attempts to execute the given
+    $code reference, then expects to find the $stop pattern. Returns
+    whatever the code reference returned.
+
+    While the code is being executed, the $stop pattern will be used by the
+    token parsing methods as an end-of-scope marker; causing them to return
+    "undef".
+
+  $ret = $parser->list_of( $sep, $code )
+    Expects to find a list of instances of something parsed by $code,
+    separated by the $sep pattern. Returns an ARRAY ref containing a list of
+    the return values from the $code.
+
+    This method does not consider it an error if the returned list is empty;
+    that is, that the scope ended before any item instances were parsed from
+    it.
+
+  $ret = $parser->sequence_of( $code )
+    A shortcut for calling "list_of" with an empty string as separator;
+    expects to find at least one instance of something parsed by $code,
+    separated only by skipped whitespace.
+
+    This may be considered to be similar to the "+" or "*" regexp
+    qualifiers.
+
+  $ret = $parser->one_of( @codes )
+    Expects that one of the given code references can parse something from
+    the input, returning what it returned. Each code reference may indicate
+    a failure to parse by calling the "fail" method.
+
+    This may be considered to be similar to the "|" regexp operator for
+    forming alternations of possible parse trees.
+
+  $parser->commit
+    Calling this method will cancel the backtracking behaviour of the
+    innermost "maybe" or "one_of" structure forming method. That is, if
+    later code then calls "fail", the exception will be propagated out of
+    "maybe", and no further code blocks will be attempted by "one_of".
+
+    Typically this will be called once the grammatical structure of an
+    alternation has been determined, ensuring that any further failures are
+    raised as real exceptions, rather than by attempting other alternatives.
+
+     TODO: Code example with commit inside one_of
+
+TOKEN PARSING METHODS
+    The following methods attempt to consume some part of the input string,
+    to be used as part of the parsing process.
+
+    As a convenience for parsing, each of these methods will return undef if
+    the string is already at the end (if "at_eos" returns true).
+
+  $parser->expect( $string )
+  $parser->expect( qr/pattern/ )
+    Expects to find a literal string or regexp pattern match, and consumes
+    it. This method does not return a useful value.
+
+  $int = $parser->token_int
+    Expects to find an integer in decimal, octal or hexadecimal notation,
+    and consumes it.
+
+  $str = $parser->token_string
+    Expects to find a quoted string, and consumes it. The string should be
+    quoted using """ or "'" quote marks.
+
+  $ident = $parser->token_ident
+    Expects to find an identifier, and consumes it.
+
+  $keyword = $parser->token_kw( @keywords )
+    Expects to find a keyword, and consumes it. A keyword is defined as an
+    identifier which is exactly one of the literal values passed in.
+
+TODO
+    *   Unescaping of string constants; customisable
+
+    *   Easy ability for subclasses to define more token types
+
+AUTHOR
+    Paul Evans <leonerd@leonerd.org.uk>
+
