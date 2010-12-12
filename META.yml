@@ -15,7 +15,9 @@ name: Parser-MGC
 provides:
   Parser::MGC:
     file: lib/Parser/MGC.pm
-    version: 0.02
+    version: 0.03
+requires:
+  File::Slurp: 0
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.02
+version: 0.03

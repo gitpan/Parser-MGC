@@ -22,9 +22,13 @@ is_deeply( $parser->from_string( "hello world" ),
    [ "hello", "world" ],
    '"hello world"' );
 
+# Perl 5.13.6 changed the regexp form
+# Accept both old and new-style stringification
+my $modifiers = (qr/foobar/ =~ /\Q(?^/) ? '^' : '-xism';
+
 ok( !eval { $parser->from_string( "goodbye world" ) }, '"goodbye world" fails' );
 is( $@,
-   qq[Expected (?-xism:hello) on line 1 at:\n] . 
+   qq[Expected (?$modifiers:hello) on line 1 at:\n] . 
    qq[goodbye world\n] . 
    qq[^\n],
    'Exception from "goodbye world" failure' );

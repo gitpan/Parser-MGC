@@ -91,7 +91,7 @@ METHODS
   $parser->fail( $message )
     Aborts the current parse attempt with the given message string. The
     failure message will include the current line and column position, and
-    will include the line of input that failed.
+    the line of input that failed.
 
   $eos = $parser->at_eos
     Returns true if the input string is at the end of the string.
@@ -103,13 +103,26 @@ STRUCTURE-FORMING METHODS
     argument.
 
   $ret = $parser->maybe( $code )
-    Attempts to execute the given $code reference in scalar context, passing
-    in no arguments, and returning what it returned. If the code fails to
-    parse by calling the "fail" method then none of the input string will be
-    consumed; the current parsing position will be restored. "undef" will be
-    returned in this case.
+    Attempts to execute the given $code reference in scalar context, and
+    returns what it returned. If the code fails to parse by calling the
+    "fail" method then none of the input string will be consumed; the
+    current parsing position will be restored. "undef" will be returned in
+    this case.
 
     This may be considered to be similar to the "?" regexp qualifier.
+
+     sub parse_declaration
+     {
+        my $self = shift;
+
+        [ $self->parse_type,
+          $self->token_ident,
+          $self->maybe( sub {
+             $self->expect( "=" );
+             $self->parse_expression
+          } ),
+        ];
+     }
 
   $ret = $parser->scope_of( $start, $code, $stop )
     Expects to find the $start pattern, then attempts to execute the given
@@ -120,6 +133,13 @@ STRUCTURE-FORMING METHODS
     token parsing methods as an end-of-scope marker; causing them to raise a
     failure if called at the end of a scope.
 
+     sub parse_block
+     {
+        my $self = shift;
+
+        $self->scope_of( "{", sub { $self->parse_statements }, "}" );
+     }
+
   $ret = $parser->list_of( $sep, $code )
     Expects to find a list of instances of something parsed by $code,
     separated by the $sep pattern. Returns an ARRAY ref containing a list of
@@ -129,6 +149,13 @@ STRUCTURE-FORMING METHODS
     that is, that the scope ended before any item instances were parsed from
     it.
 
+     sub parse_numbers
+     {
+        my $self = shift;
+
+        $self->list_of( ",", sub { $self->token_int } );
+     }
+
   $ret = $parser->sequence_of( $code )
     A shortcut for calling "list_of" with an empty string as separator;
     expects to find at least one instance of something parsed by $code,
@@ -137,6 +164,13 @@ STRUCTURE-FORMING METHODS
     This may be considered to be similar to the "+" or "*" regexp
     qualifiers.
 
+     sub parse_statements
+     {
+        my $self = shift;
+
+        $self->sequence_of( sub { $self->parse_statement } );
+     }
+
   $ret = $parser->one_of( @codes )
     Expects that one of the given code references can parse something from
     the input, returning what it returned. Each code reference may indicate
@@ -144,6 +178,17 @@ STRUCTURE-FORMING METHODS
 
     This may be considered to be similar to the "|" regexp operator for
     forming alternations of possible parse trees.
+
+     sub parse_statement
+     {
+        my $self = shift;
+
+        $self->one_of(
+           sub { $self->parse_declaration; $self->expect(";") },
+           sub { $self->parse_expression; $self->expect(";") },
+           sub { $self->parse_block },
+        );
+     }
 
   $parser->commit
     Calling this method will cancel the backtracking behaviour of the
@@ -155,7 +200,19 @@ STRUCTURE-FORMING METHODS
     alternation has been determined, ensuring that any further failures are
     raised as real exceptions, rather than by attempting other alternatives.
 
-     TODO: Code example with commit inside one_of
+     sub parse_statement
+     {
+        my $self = shift;
+
+        $self->one_of(
+           ...
+           sub {
+              $self->scope_of( "{",
+                 sub { $self->commit; $self->parse_statements; },
+              "}" ),
+           },
+        );
+     }
 
 TOKEN PARSING METHODS
     The following methods attempt to consume some part of the input string,

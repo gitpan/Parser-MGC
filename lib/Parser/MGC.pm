@@ -8,7 +8,7 @@ package Parser::MGC;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use Carp;
 
@@ -217,8 +217,8 @@ sub where
 =head2 $parser->fail( $message )
 
 Aborts the current parse attempt with the given message string. The failure
-message will include the current line and column position, and will include
-the line of input that failed.
+message will include the current line and column position, and the line of
+input that failed.
 
 =cut
 
@@ -266,13 +266,25 @@ which will be passed the actual C<$parser> object as its first argument.
 
 =head2 $ret = $parser->maybe( $code )
 
-Attempts to execute the given C<$code> reference in scalar context, passing in
-no arguments, and returning what it returned. If the code fails to parse by
-calling the C<fail> method then none of the input string will be consumed; the
-current parsing position will be restored. C<undef> will be returned in this
-case.
+Attempts to execute the given C<$code> reference in scalar context, and
+returns what it returned. If the code fails to parse by calling the C<fail>
+method then none of the input string will be consumed; the current parsing
+position will be restored. C<undef> will be returned in this case.
 
 This may be considered to be similar to the C<?> regexp qualifier.
+
+ sub parse_declaration
+ {
+    my $self = shift;
+
+    [ $self->parse_type,
+      $self->token_ident,
+      $self->maybe( sub {
+         $self->expect( "=" );
+         $self->parse_expression
+      } ),
+    ];
+ }
 
 =cut
 
@@ -306,6 +318,13 @@ While the code is being executed, the C<$stop> pattern will be used by the
 token parsing methods as an end-of-scope marker; causing them to raise a
 failure if called at the end of a scope.
 
+ sub parse_block
+ {
+    my $self = shift;
+
+    $self->scope_of( "{", sub { $self->parse_statements }, "}" );
+ }
+
 =cut
 
 sub scope_of
@@ -333,6 +352,13 @@ the return values from the C<$code>.
 
 This method does not consider it an error if the returned list is empty; that
 is, that the scope ended before any item instances were parsed from it.
+
+ sub parse_numbers
+ {
+    my $self = shift;
+
+    $self->list_of( ",", sub { $self->token_int } );
+ }
 
 =cut
 
@@ -363,6 +389,13 @@ by skipped whitespace.
 
 This may be considered to be similar to the C<+> or C<*> regexp qualifiers.
 
+ sub parse_statements
+ {
+    my $self = shift;
+
+    $self->sequence_of( sub { $self->parse_statement } );
+ }
+
 =cut
 
 sub sequence_of
@@ -381,6 +414,17 @@ to parse by calling the C<fail> method.
 
 This may be considered to be similar to the C<|> regexp operator for forming
 alternations of possible parse trees.
+
+ sub parse_statement
+ {
+    my $self = shift;
+
+    $self->one_of(
+       sub { $self->parse_declaration; $self->expect(";") },
+       sub { $self->parse_expression; $self->expect(";") },
+       sub { $self->parse_block },
+    );
+ }
 
 =cut
 
@@ -417,7 +461,19 @@ Typically this will be called once the grammatical structure of an
 alternation has been determined, ensuring that any further failures are raised
 as real exceptions, rather than by attempting other alternatives.
 
- TODO: Code example with commit inside one_of
+ sub parse_statement
+ {
+    my $self = shift;
+
+    $self->one_of(
+       ...
+       sub {
+          $self->scope_of( "{",
+             sub { $self->commit; $self->parse_statements; },
+          "}" ),
+       },
+    );
+ }
 
 =cut
 

@@ -5,6 +5,7 @@ WriteMakefile
           'NAME' => 'Parser::MGC',
           'VERSION_FROM' => 'lib/Parser/MGC.pm',
           'PREREQ_PM' => {
+                           'File::Slurp' => 0,
                            'Test::More' => 0
                          },
           'INSTALLDIRS' => 'site',

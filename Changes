@@ -1,5 +1,12 @@
 Revision history for Parser-MGC
 
+0.03    CHANGES:
+         * Expanded documentation, more examples
+        
+        BUGFIXES:
+         * Regexp quoting fix for perl >= 5.13.6
+         * Declare dependency on File::Slurp
+
 0.02    CHANGES:
          * ->expect now returns the consumed string
          * ->token_int recognises negative integers
