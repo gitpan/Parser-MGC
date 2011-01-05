@@ -1,5 +1,14 @@
 Revision history for Parser-MGC
 
+0.04    CHANGES:
+         * Added ->token_float
+         * Optionally parse 0o... ad octal integers
+
+        BUGFIXES:
+         * Match strings non-greedily
+         * Correct exception printing when line indent includes tabs (thanks
+           to Khisanth/#perl)
+
 0.03    CHANGES:
          * Expanded documentation, more examples
         

@@ -1,6 +1,7 @@
 Build.PL
 Changes
 examples/eval-expr.pl
+examples/synopsis.pl
 lib/Parser/MGC.pm
 LICENSE
 Makefile.PL
@@ -13,9 +14,10 @@ t/02expect.t
 t/03where.t
 t/04comment.t
 t/10token_int.t
-t/11token_string.t
-t/12token_ident.t
-t/13token_kw.t
+t/11token_float.t
+t/12token_string.t
+t/13token_ident.t
+t/14token_kw.t
 t/20maybe.t
 t/21scope_of.t
 t/22list_of.t

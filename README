@@ -50,6 +50,10 @@ CONSTRUCTOR
             references, to override the default patterns used to match
             tokens. See "PATTERNS" below
 
+    accept_0o_oct => BOOL
+            If true, the "token_int" method will also accept integers with a
+            "0o" prefix as octal.
+
 PATTERNS
     The following pattern names are recognised. They may be passed to the
     constructor in the "patterns" hash, or provided as a class method under
@@ -63,6 +67,12 @@ PATTERNS
     *   comment
 
         Pattern used to skip comments between tokens. Undefined by default.
+
+    *   int
+
+        Pattern used to parse an integer by "token_int". Defaults to
+        "/0x[[:xdigit:]]+|[[:digit:]]+/". If "accept_0o_oct" is given, then
+        this will be expanded to match "/0o[0-7]+/" as well.
 
     *   ident
 
@@ -227,6 +237,11 @@ TOKEN PARSING METHODS
     Expects to find an integer in decimal, octal or hexadecimal notation,
     and consumes it. Negative integers, preceeded by "-", are also
     recognised.
+
+  $int = $parser->token_float
+    Expects to find a number expressed in floating-point notation; a
+    sequence of digits possibly prefixed by "-", possibly containing a
+    decimal point.
 
   $str = $parser->token_string
     Expects to find a quoted string, and consumes it. The string should be

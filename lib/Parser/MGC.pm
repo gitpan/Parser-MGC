@@ -8,7 +8,7 @@ package Parser::MGC;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use Carp;
 
@@ -76,6 +76,11 @@ Takes the following named arguments
 Keys in this hash should map to quoted regexp (C<qr//>) references, to
 override the default patterns used to match tokens. See C<PATTERNS> below
 
+=item accept_0o_oct => BOOL
+
+If true, the C<token_int> method will also accept integers with a C<0o> prefix
+as octal.
+
 =back
 
 =cut
@@ -96,6 +101,12 @@ Pattern used to skip whitespace between tokens. Defaults to C</[\s\n\t]+/>
 
 Pattern used to skip comments between tokens. Undefined by default.
 
+=item * int
+
+Pattern used to parse an integer by C<token_int>. Defaults to
+C</0x[[:xdigit:]]+|[[:digit:]]+/>. If C<accept_0o_oct> is given, then this
+will be expanded to match C</0o[0-7]+/> as well.
+
 =item * ident
 
 Pattern used to parse an identifier by C<token_ident>. Defaults to
@@ -112,6 +123,7 @@ Pattern used to delimit a string by C<token_string>. Defaults to C</["']/>.
 my @patterns = qw(
    ws
    comment
+   int
    ident
    string_delim
 );
@@ -119,6 +131,7 @@ my @patterns = qw(
 use constant {
    pattern_ws      => qr/[\s\n\t]+/,
    pattern_comment => undef,
+   pattern_int     => qr/0x[[:xdigit:]]+|[[:digit:]]+/,
    pattern_ident   => qr/[[:alpha:]_]\w*/,
    pattern_string_delim => qr/["']/,
 };
@@ -136,6 +149,10 @@ sub new
    }, $class;
 
    $self->{patterns}{$_} = $args{patterns}{$_} || $self->${\"pattern_$_"} for @patterns;
+
+   if( $args{accept_0o_oct} ) {
+      $self->{patterns}{int} = qr/0o[0-7]+|$self->{patterns}{int}/;
+   }
 
    return $self;
 }
@@ -542,14 +559,35 @@ sub token_int
 
    $self->fail( "Expected integer" ) if $self->at_eos;
 
-   $self->{str} =~ m/\G(-?)(0x[[:xdigit:]]+|[[:digit:]]+)/gc or
+   $self->{str} =~ m/\G(-?)($self->{patterns}{int})/gc or
       $self->fail( "Expected integer" );
 
    my $sign = $1 ? -1 : 1;
    my $int = $2;
 
+   $int =~ s/^0o/0/;
+
    return $sign * oct $int if $int =~ m/^0/;
    return $sign * $int;
+}
+
+=head2 $int = $parser->token_float
+
+Expects to find a number expressed in floating-point notation; a sequence of
+digits possibly prefixed by C<->, possibly containing a decimal point.
+
+=cut
+
+sub token_float
+{
+   my $self = shift;
+
+   $self->fail( "Expected float" ) if $self->at_eos;
+
+   $self->{str} =~ m/\G(-?(?:\d*\.\d+|\d+\.)(?:e-?\d+)?|-?\d+e-?\d+)/gci or
+      $self->fail( "Expected float" );
+
+   return $1 + 0;
 }
 
 =head2 $str = $parser->token_string
@@ -572,7 +610,7 @@ sub token_string
 
    my $delim = $1;
 
-   $self->{str} =~ m/\G((?:\\.|[^\\])*)$delim/gc or
+   $self->{str} =~ m/\G((?:\\.|[^\\])*?)$delim/gc or
       pos($self->{str}) = $pos, $self->fail( "Expected contents of string" );
 
    my $string = $1;
@@ -641,9 +679,16 @@ sub STRING
 {
    my $self = shift;
 
+   # Column number only counts characters. There may be tabs in there.
+   # Rather than trying to calculate the visual column number, just print the
+   # indentation as it stands.
+
+   my $indent = substr( $self->{text}, 0, $self->{col} );
+   $indent =~ s/[^ \t]/ /g; # blank out all the non-whitespace
+
    return "$self->{message} on line $self->{linenum} at:\n" . 
           "$self->{text}\n" . 
-          ( " " x $self->{col} . "^" ) . "\n";
+          "$indent^\n";
 }
 
 # Provide fallback operators for cmp, eq, etc...
