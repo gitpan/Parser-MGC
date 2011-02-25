@@ -1,5 +1,9 @@
 Revision history for Parser-MGC
 
+0.05    CHANGES:
+         * Added ->scope_level
+         * Added ->from_reader as a new potential source of string input
+
 0.04    CHANGES:
          * Added ->token_float
          * Optionally parse 0o... ad octal integers

@@ -1,14 +1,14 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2010 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2010-2011 -- leonerd@leonerd.org.uk
 
 package Parser::MGC;
 
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use Carp;
 
@@ -146,6 +146,7 @@ sub new
 
    my $self = bless {
       patterns => {},
+      scope_level => 0,
    }, $class;
 
    $self->{patterns}{$_} = $args{patterns}{$_} || $self->${\"pattern_$_"} for @patterns;
@@ -199,6 +200,44 @@ sub from_file
    $self->{filename} = $filename;
 
    $self->from_string( scalar(slurp $filename) );
+}
+
+=head2 $result = $parser->from_reader( \&reader )
+
+Parse the input which is read by the C<reader> function. This function will be
+called in scalar context to generate portions of string to parse, being passed
+the C<$parser> object. The function should return C<undef> when it has no more
+string to return.
+
+ $reader->( $parser )
+
+Note that because it is not generally possible to detect exactly when more
+input may be required due to failed regexp parsing, the reader function is
+only invoked during searching for skippable whitespace. This makes it suitable
+for reading lines of a file in the common case where lines are considered as
+skippable whitespace, or for reading lines of input interractively from a
+user. It cannot be used in all cases (for example, reading fixed-size buffers
+from a file) because two successive invocations may split a single token
+across the buffer boundaries, and cause parse failures parse failures.
+
+=cut
+
+sub from_reader
+{
+   my $self = shift;
+   my ( $reader ) = @_;
+
+   local $self->{reader} = $reader;
+
+   $self->{str} = "";
+   pos $self->{str} = 0;
+
+   my $result = $self->parse;
+
+   $self->at_eos or
+      $self->fail( "Expected end of input" );
+
+   return $result;
 }
 
 =head2 ( $lineno, $col, $text ) = $parser->where
@@ -271,6 +310,18 @@ sub at_eos
    my $at_eos = $self->{str} =~ m/\G$self->{endofscope}/;
 
    return $at_eos;
+}
+
+=head2 $level = $parser->scope_level
+
+Returns the number of nested C<scope_of> calls that have been made.
+
+=cut
+
+sub scope_level
+{
+   my $self = shift;
+   return $self->{scope_level};
 }
 
 =head1 STRUCTURE-FORMING METHODS
@@ -353,6 +404,7 @@ sub scope_of
 
    $self->expect( $start );
    local $self->{endofscope} = $stop;
+   local $self->{scope_level} = $self->{scope_level} + 1;
 
    my $ret = $code->( $self );
 
@@ -519,8 +571,26 @@ sub skip_ws
    my $ws = $self->{patterns}{ws};
    my $c  = $self->{patterns}{comment};
 
-   1 while $self->{str} =~ m/\G$ws/gc or
-           ( $c and $self->{str} =~ m/\G$c/gc );
+   {
+      1 while $self->{str} =~ m/\G$ws/gc or
+              ( $c and $self->{str} =~ m/\G$c/gc );
+
+      return if pos( $self->{str} ) < length $self->{str};
+
+      return unless $self->{reader};
+
+      my $more = $self->{reader}->( $self );
+      if( defined $more ) {
+         my $pos = pos( $self->{str} );
+         $self->{str} .= $more;
+         pos( $self->{str} ) = $pos;
+
+         redo;
+      }
+
+      undef $self->{reader};
+      return;
+   }
 }
 
 =head2 $parser->expect( $string )
@@ -694,11 +764,6 @@ sub STRING
 # Provide fallback operators for cmp, eq, etc...
 use overload fallback => 1;
 
-# Keep perl happy; keep Britain tidy
-1;
-
-__END__
-
 =head1 TODO
 
 =over 4
@@ -711,8 +776,17 @@ Unescaping of string constants; customisable
 
 Easy ability for subclasses to define more token types
 
+=item *
+
+Investigate how well C<from_reader> can cope with buffer splitting across
+other tokens than simply skippable whitespace
+
 =back
 
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>
+
+=cut
+
+0x55AA;

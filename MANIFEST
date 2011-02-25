@@ -11,8 +11,9 @@ README
 t/00use.t
 t/01base.t
 t/02expect.t
-t/03where.t
-t/04comment.t
+t/03reader.t
+t/04where.t
+t/05comment.t
 t/10token_int.t
 t/11token_float.t
 t/12token_string.t
@@ -24,4 +25,5 @@ t/22list_of.t
 t/23sequence_of.t
 t/24one_of.t
 t/30commit.t
+t/31scope_level.t
 t/99pod.t

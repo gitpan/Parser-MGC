@@ -93,6 +93,24 @@ METHODS
     Parse the given file, which may be a pathname in a string, or an opened
     IO handle, and return the result from the "parse" method.
 
+  $result = $parser->from_reader( \&reader )
+    Parse the input which is read by the "reader" function. This function
+    will be called in scalar context to generate portions of string to
+    parse, being passed the $parser object. The function should return
+    "undef" when it has no more string to return.
+
+     $reader->( $parser )
+
+    Note that because it is not generally possible to detect exactly when
+    more input may be required due to failed regexp parsing, the reader
+    function is only invoked during searching for skippable whitespace. This
+    makes it suitable for reading lines of a file in the common case where
+    lines are considered as skippable whitespace, or for reading lines of
+    input interractively from a user. It cannot be used in all cases (for
+    example, reading fixed-size buffers from a file) because two successive
+    invocations may split a single token across the buffer boundaries, and
+    cause parse failures parse failures.
+
   ( $lineno, $col, $text ) = $parser->where
     Returns the current parse position, as a line and column number, and the
     entire current line of text. The first line is numbered 1, and the first
@@ -105,6 +123,9 @@ METHODS
 
   $eos = $parser->at_eos
     Returns true if the input string is at the end of the string.
+
+  $level = $parser->scope_level
+    Returns the number of nested "scope_of" calls that have been made.
 
 STRUCTURE-FORMING METHODS
     The following methods may be used to build a grammatical structure out
@@ -258,6 +279,9 @@ TODO
     *   Unescaping of string constants; customisable
 
     *   Easy ability for subclasses to define more token types
+
+    *   Investigate how well "from_reader" can cope with buffer splitting
+        across other tokens than simply skippable whitespace
 
 AUTHOR
     Paul Evans <leonerd@leonerd.org.uk>
