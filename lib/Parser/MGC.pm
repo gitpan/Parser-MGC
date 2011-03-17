@@ -8,7 +8,7 @@ package Parser::MGC;
 use strict;
 use warnings;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 use Carp;
 
@@ -28,7 +28,7 @@ C<Parser::MGC> - build simple recursive-descent parsers
     my $self = shift;
 
     $self->sequence_of( sub {
-       $self->one_of(
+       $self->any_of(
           sub { $self->token_int },
           sub { $self->token_string },
           sub { \$self->token_ident },
@@ -283,8 +283,6 @@ sub fail
    my $self = shift;
    my ( $message ) = @_;
 
-   my ( $lineno, $col, $line ) = $self->where;
-
    die Parser::MGC::Failure->new( $message, $self->where );
 }
 
@@ -298,16 +296,22 @@ sub at_eos
 {
    my $self = shift;
 
-   $self->skip_ws;
-
    my $pos = pos $self->{str};
 
-   return 1 if defined $pos and $pos >= length $self->{str};
+   $self->skip_ws;
 
-   return 0 unless defined $self->{endofscope};
+   my $at_eos;
+   if( pos( $self->{str} ) >= length $self->{str} ) {
+      $at_eos = 1;
+   }
+   elsif( defined $self->{endofscope} ) {
+      $at_eos = $self->{str} =~ m/\G$self->{endofscope}/;
+   }
+   else {
+      $at_eos = 0;
+   }
 
-   # No /g so we won't actually alter pos()
-   my $at_eos = $self->{str} =~ m/\G$self->{endofscope}/;
+   pos( $self->{str} ) = $pos;
 
    return $at_eos;
 }
@@ -393,6 +397,20 @@ failure if called at the end of a scope.
     $self->scope_of( "{", sub { $self->parse_statements }, "}" );
  }
 
+If the C<$start> pattern is undefined, it is presumed the caller has already
+checked for this. This is useful when the stop pattern needs to be calculated
+based on the start pattern.
+
+ sub parse_bracketed
+ {
+    my $self = shift;
+
+    my $delim = $self->expect( qr/[\(\[\<\{]/ );
+    $delim =~ tr/([<{/)]>}/;
+
+    $self->enter_scope( undef, sub { $self->parse_body }, $delim );
+ }
+
 =cut
 
 sub scope_of
@@ -402,7 +420,8 @@ sub scope_of
 
    ref $stop or $stop = qr/\Q$stop/;
 
-   $self->expect( $start );
+   $self->expect( $start ) if defined $start;
+
    local $self->{endofscope} = $stop;
    local $self->{scope_level} = $self->{scope_level} + 1;
 
@@ -441,7 +460,7 @@ sub list_of
    my @ret;
 
    while( !$self->at_eos ) {
-      push @ret, scalar $code->( $self );
+      push @ret, $code->( $self );
 
       $self->skip_ws;
       $self->{str} =~ m/\G$sep/gc or last;
@@ -472,10 +491,16 @@ sub sequence_of
    my $self = shift;
    my ( $code ) = @_;
 
-   return $self->list_of( "", $code );
+   my @ret;
+
+   while( !$self->at_eos ) {
+      push @ret, $code->( $self );
+   }
+
+   return \@ret;
 }
 
-=head2 $ret = $parser->one_of( @codes )
+=head2 $ret = $parser->any_of( @codes )
 
 Expects that one of the given code references can parse something from the
 input, returning what it returned. Each code reference may indicate a failure
@@ -488,16 +513,21 @@ alternations of possible parse trees.
  {
     my $self = shift;
 
-    $self->one_of(
+    $self->any_of(
        sub { $self->parse_declaration; $self->expect(";") },
        sub { $self->parse_expression; $self->expect(";") },
        sub { $self->parse_block },
     );
  }
 
+Note: This method used to be called C<one_of>, but was renamed for clarity.
+Currently this method is provided also as an alias by the old name. Code
+using the old name should be rewritten to C<any_of> instead, as this 
+backward-compatibility alias may be removed in a later version.
+
 =cut
 
-sub one_of
+sub any_of
 {
    my $self = shift;
 
@@ -519,12 +549,14 @@ sub one_of
    $self->fail( "Found nothing parseable" );
 }
 
+*one_of = \&any_of;
+
 =head2 $parser->commit
 
 Calling this method will cancel the backtracking behaviour of the innermost
-C<maybe> or C<one_of> structure forming method. That is, if later code then
+C<maybe> or C<any_of> structure forming method. That is, if later code then
 calls C<fail>, the exception will be propagated out of C<maybe>, and no
-further code blocks will be attempted by C<one_of>.
+further code blocks will be attempted by C<any_of>.
 
 Typically this will be called once the grammatical structure of an
 alternation has been determined, ensuring that any further failures are raised
@@ -534,7 +566,7 @@ as real exceptions, rather than by attempting other alternatives.
  {
     my $self = shift;
 
-    $self->one_of(
+    $self->any_of(
        ...
        sub {
           $self->scope_of( "{",
@@ -593,9 +625,9 @@ sub skip_ws
    }
 }
 
-=head2 $parser->expect( $string )
+=head2 $str = $parser->expect( $literal )
 
-=head2 $parser->expect( qr/pattern/ )
+=head2 $str = $parser->expect( qr/pattern/ )
 
 Expects to find a literal string or regexp pattern match, and consumes it.
 This method returns the string that was captured.
@@ -616,6 +648,62 @@ sub expect
    return $1;
 }
 
+=head2 $str = $parser->substring_before( $literal )
+
+=head2 $str = $parser->substring_before( qr/pattern/ )
+
+Expects to possibly find a literal string or regexp pattern match. If it finds
+such, consume all the input text before but excluding this match, and return
+it. If it fails to find a match before the end of the current scope, consumes
+all the input text until the end of scope and return it.
+
+This method does not consume the part of input that matches, only the text
+before it. It is not considered a failure if the substring before this match
+is empty. If a non-empty match is required, use the C<fail> method:
+
+ sub token_nonempty_part
+ {
+    my $self = shift;
+
+    my $str = $parser->substring_before( "," );
+    length $str or $self->fail( "Expected a string fragment before ," );
+
+    return $str;
+ }
+
+Note that unlike most of the other token parsing methods, this method does not
+consume either leading or trailing whitespace around the substring. It is
+expected that this method would be used as part a parser to read quoted
+strings, or similar cases where whitespace should be preserved.
+
+=cut
+
+sub substring_before
+{
+   my $self = shift;
+   my ( $expect ) = @_;
+
+   ref $expect or $expect = qr/\Q$expect/;
+
+   my $endre = ( defined $self->{endofscope} ) ?
+      qr/$expect|$self->{endofscope}/ :
+      $expect;
+
+   # NO skip_ws
+
+   my $start = pos $self->{str};
+   my $end;
+   if( $self->{str} =~ m/\G(?s:.*?)($endre)/ ) {
+      $end = $-[1];
+   }
+   else {
+      $end = length $self->{str};
+   }
+
+   pos( $self->{str} ) = $end;
+   return substr( $self->{str}, $start, $end - $start );
+}
+
 =head2 $int = $parser->token_int
 
 Expects to find an integer in decimal, octal or hexadecimal notation, and
@@ -629,6 +717,7 @@ sub token_int
 
    $self->fail( "Expected integer" ) if $self->at_eos;
 
+   $self->skip_ws;
    $self->{str} =~ m/\G(-?)($self->{patterns}{int})/gc or
       $self->fail( "Expected integer" );
 
@@ -654,6 +743,7 @@ sub token_float
 
    $self->fail( "Expected float" ) if $self->at_eos;
 
+   $self->skip_ws;
    $self->{str} =~ m/\G(-?(?:\d*\.\d+|\d+\.)(?:e-?\d+)?|-?\d+e-?\d+)/gci or
       $self->fail( "Expected float" );
 
@@ -665,7 +755,34 @@ sub token_float
 Expects to find a quoted string, and consumes it. The string should be quoted
 using C<"> or C<'> quote marks.
 
+The content of the quoted string can contain character escapes similar to
+those accepted by C or Perl. Specifically, the following forms are recognised:
+
+ \a           Bell ("alert")
+ \b           Backspace
+ \e           Escape
+ \f           Form feed
+ \n           Newline
+ \r           Return
+ \t           Horizontal Tab
+ \0, \012     Octal character
+ \x34, \x{5678}   Hexadecimal character
+
+C's C<\v> for vertical tab is not supported as it is rarely used in practice
+and it collides with Perl's C<\v> regexp escape. Perl's C<\c> for forming other
+control characters is also not supported.
+
 =cut
+
+my %escapes = (
+   a => "\a",
+   b => "\b",
+   e => "\e",
+   f => "\f",
+   n => "\n",
+   r => "\r",
+   t => "\t",
+);
 
 sub token_string
 {
@@ -675,17 +792,31 @@ sub token_string
 
    my $pos = pos $self->{str};
 
+   $self->skip_ws;
    $self->{str} =~ m/\G($self->{patterns}{string_delim})/gc or
       $self->fail( "Expected string delimiter" );
 
    my $delim = $1;
 
-   $self->{str} =~ m/\G((?:\\.|[^\\])*?)$delim/gc or
-      pos($self->{str}) = $pos, $self->fail( "Expected contents of string" );
+   $self->{str} =~ m/
+      \G(
+         (?:
+            \\[0-7]{1,3}     # octal escape
+           |\\x[0-9A-F]{2}   # 2-digit hex escape
+           |\\x\{[0-9A-F]+\} # {}-delimited hex escape
+           |\\.              # symbolic escape
+           |[^\\$delim]+     # plain chunk
+         )*?
+      )$delim/gcix or
+         pos($self->{str}) = $pos, $self->fail( "Expected contents of string" );
 
    my $string = $1;
 
-   # TODO: Unescape stuff like \\ and \n and whatnot
+   $string =~ s<\\(?:([0-7]{1,3})|x([0-9A-F]{2})|x\{([0-9A-F]+)\}|(.))>
+               [defined $1 ? chr oct $1 :
+                defined $2 ? chr hex $2 :
+                defined $3 ? chr hex $3 :
+                             exists $escapes{$4} ? $escapes{$4} : $4]egi;
 
    return $string;
 }
@@ -702,6 +833,7 @@ sub token_ident
 
    $self->fail( "Expected identifier" ) if $self->at_eos;
 
+   $self->skip_ws;
    $self->{str} =~ m/\G($self->{patterns}{ident})/gc or
       $self->fail( "Expected identifier" );
 
@@ -764,13 +896,46 @@ sub STRING
 # Provide fallback operators for cmp, eq, etc...
 use overload fallback => 1;
 
+=head1 EXAMPLES
+
+=head2 Accumulating Results Using Variables
+
+Although the structure-forming methods all return a value, obtained from their
+nested parsing code, it can sometimes be more convenient to use a variable to
+accumulate a result in instead. For example, consider the following parser
+method, designed to parse a set of C<name: "value"> assignments, such as might
+be found in a configuration file, or YAML/JSON-style mapping value.
+
+ sub parse_dict
+ {
+    my $self = shift;
+ 
+    my %ret;
+    $self->list_of( ",", sub {
+       my $key = $self->token_ident;
+       exists $ret{$key} and $self->fail( "Already have a mapping for '$key'" );
+ 
+       $self->expect( ":" );
+ 
+       $ret{$key} = $self->parse_value;
+    } );
+ 
+    return \%ret
+ }
+
+Instead of using the return value from C<list_of>, this method accumulates
+values in the C<%ret> hash, eventually returning a reference to it as its
+result. Because of this, it can perform some error checking while it parses;
+namely, rejecting duplicate keys.
+
 =head1 TODO
 
 =over 4
 
 =item *
 
-Unescaping of string constants; customisable
+Make unescaping of string constants more customisable. Possibly consider
+instead a C<parse_string_generic> using a loop over C<substring_before>.
 
 =item *
 

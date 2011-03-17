@@ -1,6 +1,8 @@
 Build.PL
 Changes
 examples/eval-expr.pl
+examples/parse-dict.pl
+examples/parse-pod.pl
 examples/synopsis.pl
 lib/Parser/MGC.pm
 LICENSE
@@ -14,6 +16,7 @@ t/02expect.t
 t/03reader.t
 t/04where.t
 t/05comment.t
+t/06substring.t
 t/10token_int.t
 t/11token_float.t
 t/12token_string.t
@@ -23,7 +26,12 @@ t/20maybe.t
 t/21scope_of.t
 t/22list_of.t
 t/23sequence_of.t
-t/24one_of.t
+t/24any_of.t
 t/30commit.t
 t/31scope_level.t
+t/90ex_dict.t
+t/90ex_expr.t
+t/90ex_pod.t
+t/90ex_synopsis.t
+t/98backcompat.t
 t/99pod.t

@@ -13,7 +13,7 @@ sub parse
 
    $self->sequence_of( 
       sub {
-         $self->one_of(
+         $self->any_of(
             sub { $self->expect( qr/[a-z]+/ ) . "/" . $self->scope_level },
             sub { $self->scope_of( "(", \&parse, ")" ) },
          );

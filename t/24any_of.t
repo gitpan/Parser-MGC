@@ -11,7 +11,7 @@ sub parse
 {
    my $self = shift;
 
-   $self->one_of(
+   $self->any_of(
       sub { [ int => $self->token_int ] },
       sub { [ str => $self->token_string ] },
       sub { [ ident => $self->token_ident ] },

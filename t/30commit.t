@@ -11,7 +11,7 @@ sub parse
 {
    my $self = shift;
 
-   $self->one_of(
+   $self->any_of(
       sub { $self->token_int },
       sub {
          $self->scope_of( "(",

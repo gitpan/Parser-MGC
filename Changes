@@ -1,5 +1,15 @@
 Revision history for Parser-MGC
 
+0.06    CHANGES:
+         * Renamed ->one_of to ->any_of
+         * Added ->substring_before
+         * Allow ->scope_of to not take a start pattern
+         * Recognise the usual set of character escapes in ->token_string
+         * Added more example scripts to demonstrate:
+            + the use ->substring_before to parse POD-like notation
+            + accumulator variables instead of structural return
+         * Unit-test the example scripts
+
 0.05    CHANGES:
          * Added ->scope_level
          * Added ->from_reader as a new potential source of string input

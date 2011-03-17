@@ -11,7 +11,7 @@ sub parse
    my $self = shift;
 
    $self->sequence_of( sub {
-      $self->one_of(
+      $self->any_of(
          sub { $self->token_int },
          sub { $self->token_string },
          sub { \$self->token_ident },
@@ -23,4 +23,9 @@ sub parse
 my $parser = LispParser->new;
 
 use Data::Dump qw( pp );
-print pp( $parser->from_file( $ARGV[0] ) );
+
+if( !caller ) {
+   print pp( $parser->from_file( $ARGV[0] ) );
+}
+
+1;

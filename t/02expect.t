@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 3;
+use Test::More tests => 4;
 
 package TestParser;
 use base qw( Parser::MGC );
@@ -21,6 +21,10 @@ my $parser = TestParser->new;
 is_deeply( $parser->from_string( "hello world" ),
    [ "hello", "world" ],
    '"hello world"' );
+
+is_deeply( $parser->from_string( "  hello world  " ),
+   [ "hello", "world" ],
+   '"  hello world  "' );
 
 # Perl 5.13.6 changed the regexp form
 # Accept both old and new-style stringification

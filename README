@@ -10,7 +10,7 @@ SYNOPSIS
         my $self = shift;
 
         $self->sequence_of( sub {
-           $self->one_of(
+           $self->any_of(
               sub { $self->token_int },
               sub { $self->token_string },
               sub { \$self->token_ident },
@@ -171,6 +171,20 @@ STRUCTURE-FORMING METHODS
         $self->scope_of( "{", sub { $self->parse_statements }, "}" );
      }
 
+    If the $start pattern is undefined, it is presumed the caller has
+    already checked for this. This is useful when the stop pattern needs to
+    be calculated based on the start pattern.
+
+     sub parse_bracketed
+     {
+        my $self = shift;
+
+        my $delim = $self->expect( qr/[\(\[\<\{]/ );
+        $delim =~ tr/([<{/)]>}/;
+
+        $self->enter_scope( undef, sub { $self->parse_body }, $delim );
+     }
+
   $ret = $parser->list_of( $sep, $code )
     Expects to find a list of instances of something parsed by $code,
     separated by the $sep pattern. Returns an ARRAY ref containing a list of
@@ -202,7 +216,7 @@ STRUCTURE-FORMING METHODS
         $self->sequence_of( sub { $self->parse_statement } );
      }
 
-  $ret = $parser->one_of( @codes )
+  $ret = $parser->any_of( @codes )
     Expects that one of the given code references can parse something from
     the input, returning what it returned. Each code reference may indicate
     a failure to parse by calling the "fail" method.
@@ -214,18 +228,23 @@ STRUCTURE-FORMING METHODS
      {
         my $self = shift;
 
-        $self->one_of(
+        $self->any_of(
            sub { $self->parse_declaration; $self->expect(";") },
            sub { $self->parse_expression; $self->expect(";") },
            sub { $self->parse_block },
         );
      }
 
+    Note: This method used to be called "one_of", but was renamed for
+    clarity. Currently this method is provided also as an alias by the old
+    name. Code using the old name should be rewritten to "any_of" instead,
+    as this backward-compatibility alias may be removed in a later version.
+
   $parser->commit
     Calling this method will cancel the backtracking behaviour of the
-    innermost "maybe" or "one_of" structure forming method. That is, if
+    innermost "maybe" or "any_of" structure forming method. That is, if
     later code then calls "fail", the exception will be propagated out of
-    "maybe", and no further code blocks will be attempted by "one_of".
+    "maybe", and no further code blocks will be attempted by "any_of".
 
     Typically this will be called once the grammatical structure of an
     alternation has been determined, ensuring that any further failures are
@@ -235,7 +254,7 @@ STRUCTURE-FORMING METHODS
      {
         my $self = shift;
 
-        $self->one_of(
+        $self->any_of(
            ...
            sub {
               $self->scope_of( "{",
@@ -249,10 +268,38 @@ TOKEN PARSING METHODS
     The following methods attempt to consume some part of the input string,
     to be used as part of the parsing process.
 
-  $parser->expect( $string )
-  $parser->expect( qr/pattern/ )
+  $str = $parser->expect( $literal )
+  $str = $parser->expect( qr/pattern/ )
     Expects to find a literal string or regexp pattern match, and consumes
     it. This method returns the string that was captured.
+
+  $str = $parser->substring_before( $literal )
+  $str = $parser->substring_before( qr/pattern/ )
+    Expects to possibly find a literal string or regexp pattern match. If it
+    finds such, consume all the input text before but excluding this match,
+    and return it. If it fails to find a match before the end of the current
+    scope, consumes all the input text until the end of scope and return it.
+
+    This method does not consume the part of input that matches, only the
+    text before it. It is not considered a failure if the substring before
+    this match is empty. If a non-empty match is required, use the "fail"
+    method:
+
+     sub token_nonempty_part
+     {
+        my $self = shift;
+
+        my $str = $parser->substring_before( "," );
+        length $str or $self->fail( "Expected a string fragment before ," );
+
+        return $str;
+     }
+
+    Note that unlike most of the other token parsing methods, this method
+    does not consume either leading or trailing whitespace around the
+    substring. It is expected that this method would be used as part a
+    parser to read quoted strings, or similar cases where whitespace should
+    be preserved.
 
   $int = $parser->token_int
     Expects to find an integer in decimal, octal or hexadecimal notation,
@@ -268,6 +315,24 @@ TOKEN PARSING METHODS
     Expects to find a quoted string, and consumes it. The string should be
     quoted using """ or "'" quote marks.
 
+    The content of the quoted string can contain character escapes similar
+    to those accepted by C or Perl. Specifically, the following forms are
+    recognised:
+
+     \a           Bell ("alert")
+     \b           Backspace
+     \e           Escape
+     \f           Form feed
+     \n           Newline
+     \r           Return
+     \t           Horizontal Tab
+     \0, \012     Octal character
+     \x34, \x{5678}   Hexadecimal character
+
+    C's "\v" for vertical tab is not supported as it is rarely used in
+    practice and it collides with Perl's "\v" regexp escape. Perl's "\c" for
+    forming other control characters is also not supported.
+
   $ident = $parser->token_ident
     Expects to find an identifier, and consumes it.
 
@@ -275,8 +340,41 @@ TOKEN PARSING METHODS
     Expects to find a keyword, and consumes it. A keyword is defined as an
     identifier which is exactly one of the literal values passed in.
 
+EXAMPLES
+  Accumulating Results Using Variables
+    Although the structure-forming methods all return a value, obtained from
+    their nested parsing code, it can sometimes be more convenient to use a
+    variable to accumulate a result in instead. For example, consider the
+    following parser method, designed to parse a set of "name: "value""
+    assignments, such as might be found in a configuration file, or
+    YAML/JSON-style mapping value.
+
+     sub parse_dict
+     {
+        my $self = shift;
+ 
+        my %ret;
+        $self->list_of( ",", sub {
+           my $key = $self->token_ident;
+           exists $ret{$key} and $self->fail( "Already have a mapping for '$key'" );
+ 
+           $self->expect( ":" );
+ 
+           $ret{$key} = $self->parse_value;
+        } );
+ 
+        return \%ret
+     }
+
+    Instead of using the return value from "list_of", this method
+    accumulates values in the %ret hash, eventually returning a reference to
+    it as its result. Because of this, it can perform some error checking
+    while it parses; namely, rejecting duplicate keys.
+
 TODO
-    *   Unescaping of string constants; customisable
+    *   Make unescaping of string constants more customisable. Possibly
+        consider instead a "parse_string_generic" using a loop over
+        "substring_before".
 
     *   Easy ability for subclasses to define more token types
 

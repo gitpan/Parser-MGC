@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 7;
+use Test::More tests => 18;
 
 package TestParser;
 use base qw( Parser::MGC );
@@ -23,6 +23,21 @@ is( $parser->from_string( q["double"] ), "double", 'Double quoted string' );
 
 is( $parser->from_string( q["foo 'bar'"] ), "foo 'bar'", 'Double quoted string containing single substr' );
 is( $parser->from_string( q['foo "bar"'] ), 'foo "bar"', 'Single quoted string containing double substr' );
+
+is( $parser->from_string( q["tab \t"]       ), "tab \t",       '\t' );
+is( $parser->from_string( q["newline \n"]   ), "newline \n",   '\n' );
+is( $parser->from_string( q["return \r"]    ), "return \r",    '\r' );
+is( $parser->from_string( q["form feed \f"] ), "form feed \f", '\f' );
+is( $parser->from_string( q["backspace \b"] ), "backspace \b", '\b' );
+is( $parser->from_string( q["bell \a"]      ), "bell \a",      '\a' );
+is( $parser->from_string( q["escape \e"]    ), "escape \e",    '\e' );
+
+# ord('A') == 65 == 0101 == 0x41 
+#  TODO: This is ASCII dependent. If anyone on EBCDIC cares, do let me know...
+is( $parser->from_string( q["null \0"] ),         "null \0",         'Octal null' );
+is( $parser->from_string( q["octal \101BC"] ),    "octal ABC",       'Octal' );
+is( $parser->from_string( q["hex \x41BC"] ),      "hex ABC",         'Hexadecimal' );
+is( $parser->from_string( q["unihex \x{263a}"] ), "unihex \x{263a}", 'Unicode hex' );
 
 $parser = TestParser->new(
    patterns => { string_delim => qr/"/ }
