@@ -20,12 +20,12 @@ sub parse
    } );
 }
 
-my $parser = LispParser->new;
-
-use Data::Dump qw( pp );
+use Data::Dumper;
 
 if( !caller ) {
-   print pp( $parser->from_file( $ARGV[0] ) );
+   my $parser = __PACKAGE__->new;
+
+   print Dumper( $parser->from_file( $ARGV[0] ) );
 }
 
 1;

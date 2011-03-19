@@ -8,7 +8,7 @@ package Parser::MGC;
 use strict;
 use warnings;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 use Carp;
 
@@ -50,11 +50,13 @@ parsers that consume a given input string from left to right, returning a
 parse structure. It takes its name from the C<m//gc> regexps used to implement
 the token parsing behaviour.
 
-It provides a number of token-parsing methods, which each atomically extract a
+It provides a number of token-parsing methods, which each extract a
 grammatical token from the string. It also provides wrapping methods that can
-be used to build up a possibly-recursive grammar structure. Each method, both
-token and structural, atomically either consumes a prefix of the string and
-returns its result, or fails and consumes nothing.
+be used to build up a possibly-recursive grammar structure, by applying a
+structure around other parts of parsing code. Each method, both token and
+structural, atomically either consumes a prefix of the string and returns its
+result, or fails and consumes nothing. This makes it simple to implement
+grammars that require backtracking.
 
 =cut
 
@@ -218,7 +220,7 @@ for reading lines of a file in the common case where lines are considered as
 skippable whitespace, or for reading lines of input interractively from a
 user. It cannot be used in all cases (for example, reading fixed-size buffers
 from a file) because two successive invocations may split a single token
-across the buffer boundaries, and cause parse failures parse failures.
+across the buffer boundaries, and cause parse failures.
 
 =cut
 
@@ -629,8 +631,18 @@ sub skip_ws
 
 =head2 $str = $parser->expect( qr/pattern/ )
 
+=head2 @groups = $parser->expect( qr/pattern/ )
+
 Expects to find a literal string or regexp pattern match, and consumes it.
-This method returns the string that was captured.
+In scalar context, this method returns the string that was captured. In list
+context it returns the matching substring and the contents of any subgroups
+contained in the pattern.
+
+This method will raise a parse error (by calling C<fail>) if the regexp fails
+to match. Note that if the pattern could match an empty string (such as for
+example C<qr/\d*/>), the pattern will always match, even if it has to match an
+empty string. This method will not consider a failure if the regexp matches
+with zero-width.
 
 =cut
 
@@ -642,10 +654,11 @@ sub expect
    ref $expect or $expect = qr/\Q$expect/;
 
    $self->skip_ws;
-   $self->{str} =~ m/\G($expect)/gc or
+   $self->{str} =~ m/\G$expect/gc or
       $self->fail( "Expected $expect" );
 
-   return $1;
+   return substr( $self->{str}, $-[0], $+[0]-$-[0] ) if !wantarray;
+   return map { substr( $self->{str}, $-[$_], $+[$_]-$-[$_] ) } 0 .. $#+;
 }
 
 =head2 $str = $parser->substring_before( $literal )
@@ -730,10 +743,12 @@ sub token_int
    return $sign * $int;
 }
 
-=head2 $int = $parser->token_float
+=head2 $float = $parser->token_float
 
 Expects to find a number expressed in floating-point notation; a sequence of
-digits possibly prefixed by C<->, possibly containing a decimal point.
+digits possibly prefixed by C<->, possibly containing a decimal point,
+possibly followed by an exponent specified by C<e> followed by an integer. The
+numerical value is then returned.
 
 =cut
 
@@ -758,14 +773,14 @@ using C<"> or C<'> quote marks.
 The content of the quoted string can contain character escapes similar to
 those accepted by C or Perl. Specifically, the following forms are recognised:
 
- \a           Bell ("alert")
- \b           Backspace
- \e           Escape
- \f           Form feed
- \n           Newline
- \r           Return
- \t           Horizontal Tab
- \0, \012     Octal character
+ \a               Bell ("alert")
+ \b               Backspace
+ \e               Escape
+ \f               Form feed
+ \n               Newline
+ \r               Return
+ \t               Horizontal Tab
+ \0, \012         Octal character
  \x34, \x{5678}   Hexadecimal character
 
 C's C<\v> for vertical tab is not supported as it is rarely used in practice

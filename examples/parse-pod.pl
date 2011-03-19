@@ -13,9 +13,8 @@ sub parse
    $self->sequence_of(
       sub { $self->any_of(
 
-         sub { my $tag = $self->expect( qr/[A-Z](?=<)/ );
+         sub { my ( undef, $tag, $delim ) = $self->expect( qr/([A-Z])(<+)/ );
                $self->commit;
-               my $delim = $self->expect( qr/<+/ );
                +{ $tag => $self->scope_of( undef, \&parse, ">" x length $delim ) }; },
 
          sub { $self->substring_before( qr/[A-Z]</ ) },
@@ -23,7 +22,7 @@ sub parse
    );
 }
 
-use Data::Dump qw( pp );
+use Data::Dumper;
 
 if( !caller ) {
    my $parser = __PACKAGE__->new;
@@ -32,7 +31,7 @@ if( !caller ) {
       my $ret = eval { $parser->from_string( $line ) };
       print $@ and next if $@;
 
-      print pp( $ret ) . "\n";
+      print Dumper( $ret );
    }
 }
 

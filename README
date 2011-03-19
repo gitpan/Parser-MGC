@@ -31,12 +31,13 @@ DESCRIPTION
     right, returning a parse structure. It takes its name from the "m//gc"
     regexps used to implement the token parsing behaviour.
 
-    It provides a number of token-parsing methods, which each atomically
-    extract a grammatical token from the string. It also provides wrapping
-    methods that can be used to build up a possibly-recursive grammar
-    structure. Each method, both token and structural, atomically either
-    consumes a prefix of the string and returns its result, or fails and
-    consumes nothing.
+    It provides a number of token-parsing methods, which each extract a
+    grammatical token from the string. It also provides wrapping methods
+    that can be used to build up a possibly-recursive grammar structure, by
+    applying a structure around other parts of parsing code. Each method,
+    both token and structural, atomically either consumes a prefix of the
+    string and returns its result, or fails and consumes nothing. This makes
+    it simple to implement grammars that require backtracking.
 
 CONSTRUCTOR
   $parser = Parser::MGC->new( %args )
@@ -109,7 +110,7 @@ METHODS
     input interractively from a user. It cannot be used in all cases (for
     example, reading fixed-size buffers from a file) because two successive
     invocations may split a single token across the buffer boundaries, and
-    cause parse failures parse failures.
+    cause parse failures.
 
   ( $lineno, $col, $text ) = $parser->where
     Returns the current parse position, as a line and column number, and the
@@ -270,8 +271,17 @@ TOKEN PARSING METHODS
 
   $str = $parser->expect( $literal )
   $str = $parser->expect( qr/pattern/ )
+  @groups = $parser->expect( qr/pattern/ )
     Expects to find a literal string or regexp pattern match, and consumes
-    it. This method returns the string that was captured.
+    it. In scalar context, this method returns the string that was captured.
+    In list context it returns the matching substring and the contents of
+    any subgroups contained in the pattern.
+
+    This method will raise a parse error (by calling "fail") if the regexp
+    fails to match. Note that if the pattern could match an empty string
+    (such as for example "qr/\d*/"), the pattern will always match, even if
+    it has to match an empty string. This method will not consider a failure
+    if the regexp matches with zero-width.
 
   $str = $parser->substring_before( $literal )
   $str = $parser->substring_before( qr/pattern/ )
@@ -306,10 +316,11 @@ TOKEN PARSING METHODS
     and consumes it. Negative integers, preceeded by "-", are also
     recognised.
 
-  $int = $parser->token_float
+  $float = $parser->token_float
     Expects to find a number expressed in floating-point notation; a
     sequence of digits possibly prefixed by "-", possibly containing a
-    decimal point.
+    decimal point, possibly followed by an exponent specified by "e"
+    followed by an integer. The numerical value is then returned.
 
   $str = $parser->token_string
     Expects to find a quoted string, and consumes it. The string should be
@@ -319,14 +330,14 @@ TOKEN PARSING METHODS
     to those accepted by C or Perl. Specifically, the following forms are
     recognised:
 
-     \a           Bell ("alert")
-     \b           Backspace
-     \e           Escape
-     \f           Form feed
-     \n           Newline
-     \r           Return
-     \t           Horizontal Tab
-     \0, \012     Octal character
+     \a               Bell ("alert")
+     \b               Backspace
+     \e               Escape
+     \f               Form feed
+     \n               Newline
+     \r               Return
+     \t               Horizontal Tab
+     \0, \012         Octal character
      \x34, \x{5678}   Hexadecimal character
 
     C's "\v" for vertical tab is not supported as it is rarely used in

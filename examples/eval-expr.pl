@@ -53,8 +53,6 @@ sub parse_atom
    );
 }
 
-use Data::Dump qw( pp );
-
 if( !caller ) {
    my $parser = __PACKAGE__->new;
 
@@ -62,7 +60,7 @@ if( !caller ) {
       my $ret = eval { $parser->from_string( $line ) };
       print $@ and next if $@;
 
-      print pp( $ret ) . "\n";
+      print "$ret\n";
    }
 }
 

@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 4;
+use Test::More tests => 5;
 
 package TestParser;
 use base qw( Parser::MGC );
@@ -12,6 +12,16 @@ sub parse
    my $self = shift;
 
    [ $self->expect( "hello" ), $self->expect( qr/world/ ) ];
+}
+
+package HexParser;
+use base qw( Parser::MGC );
+
+sub parse
+{
+   my $self = shift;
+
+   return hex +( $self->expect( qr/0x([0-9A-F]+)/i ) )[1];
 }
 
 package main;
@@ -36,3 +46,7 @@ is( $@,
    qq[goodbye world\n] . 
    qq[^\n],
    'Exception from "goodbye world" failure' );
+
+$parser = HexParser->new;
+
+is( $parser->from_string( "0x123" ), 0x123, "Hex parser captures substring" );
