@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 4;
+use Test::More tests => 7;
 
 package TestParser;
 use base qw( Parser::MGC );
@@ -24,6 +24,23 @@ sub parse
    );
 }
 
+package IntStringPairsParser;
+use base qw( Parser::MGC );
+
+sub parse
+{
+   my $self = shift;
+
+   $self->sequence_of( sub {
+      my $int = $self->token_int;
+      $self->commit;
+
+      my $str = $self->token_string;
+
+      [ $int, $str ];
+   } );
+}
+
 package main;
 
 my $parser = TestParser->new;
@@ -37,3 +54,16 @@ is( $@,
    qq[(456)\n].
    qq[ ^\n],
    'Exception from "(456)" failure' );
+
+$parser = IntStringPairsParser->new;
+
+is_deeply( $parser->from_string( "1 'one' 2 'two'" ),
+           [ [ 1, "one" ], [ 2, "two" ] ],
+           "1 'one' 2 'two'" );
+
+ok( !eval { $parser->from_string( "1 'one' 2" ) }, "1 'one' 2 fails" );
+is( $@,
+    qq[Expected string on line 1 at:\n].
+    qq[1 'one' 2\n].
+    qq[         ^\n],
+    'Exception from 1 \'one\' 2 failure' );

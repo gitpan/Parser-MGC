@@ -1,6 +1,7 @@
 Build.PL
 Changes
 examples/eval-expr.pl
+examples/LICENSE
 examples/parse-dict.pl
 examples/parse-pod.pl
 examples/synopsis.pl
@@ -17,6 +18,7 @@ t/03reader.t
 t/04where.t
 t/05comment.t
 t/06substring.t
+t/07generic_token.t
 t/10token_int.t
 t/11token_float.t
 t/12token_string.t
@@ -29,6 +31,7 @@ t/23sequence_of.t
 t/24any_of.t
 t/30commit.t
 t/31scope_level.t
+t/32exception.t
 t/90ex_dict.t
 t/90ex_expr.t
 t/90ex_pod.t

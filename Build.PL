@@ -9,6 +9,7 @@ my $build = Module::Build->new(
       'File::Slurp' => 0,
    },
    build_requires => {
+      'File::Temp' => 0,
       'Test::More' => 0,
    },
    license => 'perl',

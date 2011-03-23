@@ -24,7 +24,7 @@ is( $parser->from_string( "x" ), "x", 'Single-letter identifier' );
 
 ok( !eval { $parser->from_string( "123" ) }, '"123" fails' );
 is( $@,
-   qq[Expected identifier on line 1 at:\n] .
+   qq[Expected ident on line 1 at:\n] .
    qq[123\n] .
    qq[^\n],
    'Exception from "123" failure' );

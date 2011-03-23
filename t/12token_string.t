@@ -14,6 +14,16 @@ sub parse
    return $self->token_string;
 }
 
+package StringPairParser;
+use base qw( Parser::MGC );
+
+sub parse
+{
+   my $self = shift;
+
+   return [ $self->token_string, $self->token_string ];
+}
+
 package main;
 
 my $parser = TestParser->new;
@@ -46,11 +56,7 @@ $parser = TestParser->new(
 is( $parser->from_string( q["double"] ), "double", 'Double quoted string still passes' );
 ok( !eval { $parser->from_string( q['single'] ) }, 'Single quoted string now fails' );
 
-no warnings 'redefine';
-local *TestParser::parse = sub {
-   my $self = shift;
-   return [ $self->token_string, $self->token_string ];
-};
+$parser = StringPairParser->new;
 
 is_deeply( $parser->from_string( q["foo" "bar"] ),
            [ "foo", "bar" ],

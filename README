@@ -72,8 +72,13 @@ PATTERNS
     *   int
 
         Pattern used to parse an integer by "token_int". Defaults to
-        "/0x[[:xdigit:]]+|[[:digit:]]+/". If "accept_0o_oct" is given, then
-        this will be expanded to match "/0o[0-7]+/" as well.
+        "/-?(?:0x[[:xdigit:]]+|[[:digit:]]+)/". If "accept_0o_oct" is given,
+        then this will be expanded to match "/0o[0-7]+/" as well.
+
+    *   float
+
+        Pattern used to parse a floating-point number by "token_float".
+        Defaults to "/-?(?:\d*\.\d+|\d+\.)(?:e-?\d+)?|-?\d+e-?\d+/i".
 
     *   ident
 
@@ -243,9 +248,10 @@ STRUCTURE-FORMING METHODS
 
   $parser->commit
     Calling this method will cancel the backtracking behaviour of the
-    innermost "maybe" or "any_of" structure forming method. That is, if
-    later code then calls "fail", the exception will be propagated out of
-    "maybe", and no further code blocks will be attempted by "any_of".
+    innermost "maybe", "list_of", "sequence_of", or "any_of" structure
+    forming method. That is, if later code then calls "fail", the exception
+    will be propagated out of "maybe", and no further code blocks will be
+    attempted by "any_of".
 
     Typically this will be called once the grammatical structure of an
     alternation has been determined, ensuring that any further failures are
@@ -310,6 +316,29 @@ TOKEN PARSING METHODS
     substring. It is expected that this method would be used as part a
     parser to read quoted strings, or similar cases where whitespace should
     be preserved.
+
+  $val = $parser->generic_token( $name, $re, $convert )
+    Expects to find a token matching the precompiled regexp $re. If
+    provided, the $convert CODE reference can be used to convert the string
+    into a more convenient form. $name is used in the failure message if the
+    pattern fails to match.
+
+    If provided, the $convert function will be passed the parser and the
+    matching substring; the value it returns is returned from
+    "generic_token".
+
+     $convert->( $parser, $substr )
+
+    If not provided, the substring will be returned as it stands.
+
+    This method is mostly provided for subclasses to define their own token
+    types. For example:
+
+     sub token_hex
+     {
+        my $self = shift;
+        $self->generic_token( hex => qr/[0-9A-F]{2}h/, sub { hex $_[1] } );
+     }
 
   $int = $parser->token_int
     Expects to find an integer in decimal, octal or hexadecimal notation,
@@ -387,7 +416,10 @@ TODO
         consider instead a "parse_string_generic" using a loop over
         "substring_before".
 
-    *   Easy ability for subclasses to define more token types
+    *   Easy ability for subclasses to define more token types as methods.
+        Perhaps provide a class method such as
+
+         __PACKAGE__->has_token( hex => qr/[0-9A-F]+/i, sub { hex $_[1] } );
 
     *   Investigate how well "from_reader" can cope with buffer splitting
         across other tokens than simply skippable whitespace

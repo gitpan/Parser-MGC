@@ -8,7 +8,7 @@ package Parser::MGC;
 use strict;
 use warnings;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 use Carp;
 
@@ -106,8 +106,13 @@ Pattern used to skip comments between tokens. Undefined by default.
 =item * int
 
 Pattern used to parse an integer by C<token_int>. Defaults to
-C</0x[[:xdigit:]]+|[[:digit:]]+/>. If C<accept_0o_oct> is given, then this
-will be expanded to match C</0o[0-7]+/> as well.
+C</-?(?:0x[[:xdigit:]]+|[[:digit:]]+)/>. If C<accept_0o_oct> is given, then
+this will be expanded to match C</0o[0-7]+/> as well.
+
+=item * float
+
+Pattern used to parse a floating-point number by C<token_float>. Defaults to
+C</-?(?:\d*\.\d+|\d+\.)(?:e-?\d+)?|-?\d+e-?\d+/i>.
 
 =item * ident
 
@@ -126,17 +131,17 @@ my @patterns = qw(
    ws
    comment
    int
+   float
    ident
    string_delim
 );
 
-use constant {
-   pattern_ws      => qr/[\s\n\t]+/,
-   pattern_comment => undef,
-   pattern_int     => qr/0x[[:xdigit:]]+|[[:digit:]]+/,
-   pattern_ident   => qr/[[:alpha:]_]\w*/,
-   pattern_string_delim => qr/["']/,
-};
+use constant pattern_ws      => qr/[\s\n\t]+/;
+use constant pattern_comment => undef;
+use constant pattern_int     => qr/-?(?:0x[[:xdigit:]]+|[[:digit:]]+)/;
+use constant pattern_float   => qr/-?(?:\d*\.\d+|\d+\.)(?:e-?\d+)?|-?\d+e-?\d+/i;
+use constant pattern_ident   => qr/[[:alpha:]_]\w*/;
+use constant pattern_string_delim => qr/["']/;
 
 sub new
 {
@@ -253,8 +258,10 @@ column is numbered 0.
 sub where
 {
    my $self = shift;
+   my ( $pos ) = @_;
 
-   my $pos = pos $self->{str};
+   defined $pos or $pos = pos $self->{str};
+
    my $str = $self->{str};
 
    my $sol = $pos;
@@ -285,7 +292,7 @@ sub fail
    my $self = shift;
    my ( $message ) = @_;
 
-   die Parser::MGC::Failure->new( $message, $self->where );
+   die Parser::MGC::Failure->new( $message, $self, pos($self->{str}) );
 }
 
 =head2 $eos = $parser->at_eos
@@ -457,15 +464,29 @@ sub list_of
    my $self = shift;
    my ( $sep, $code ) = @_;
 
-   ref $sep or $sep = qr/\Q$sep/;
+   ref $sep or $sep = qr/\Q$sep/ if defined $sep;
+
+   my $committed;
+   local $self->{committer} = sub { $committed++ };
 
    my @ret;
 
    while( !$self->at_eos ) {
-      push @ret, $code->( $self );
+      $committed = 0;
+      my $pos = pos $self->{str};
 
-      $self->skip_ws;
-      $self->{str} =~ m/\G$sep/gc or last;
+      eval { push @ret, $code->( $self ); 1 } and next;
+      my $e = $@;
+
+      pos($self->{str}) = $pos;
+      die $e if $committed or not eval { $e->isa( "Parser::MGC::Failure" ) };
+      last;
+   }
+   continue {
+      if( defined $sep ) {
+         $self->skip_ws;
+         $self->{str} =~ m/\G$sep/gc or last;
+      }
    }
 
    return \@ret;
@@ -493,13 +514,7 @@ sub sequence_of
    my $self = shift;
    my ( $code ) = @_;
 
-   my @ret;
-
-   while( !$self->at_eos ) {
-      push @ret, $code->( $self );
-   }
-
-   return \@ret;
+   $self->list_of( undef, $code );
 }
 
 =head2 $ret = $parser->any_of( @codes )
@@ -556,9 +571,9 @@ sub any_of
 =head2 $parser->commit
 
 Calling this method will cancel the backtracking behaviour of the innermost
-C<maybe> or C<any_of> structure forming method. That is, if later code then
-calls C<fail>, the exception will be propagated out of C<maybe>, and no
-further code blocks will be attempted by C<any_of>.
+C<maybe>, C<list_of>, C<sequence_of>, or C<any_of> structure forming method.
+That is, if later code then calls C<fail>, the exception will be propagated
+out of C<maybe>, and no further code blocks will be attempted by C<any_of>.
 
 Typically this will be called once the grammatical structure of an
 alternation has been determined, ensuring that any further failures are raised
@@ -717,6 +732,59 @@ sub substring_before
    return substr( $self->{str}, $start, $end - $start );
 }
 
+=head2 $val = $parser->generic_token( $name, $re, $convert )
+
+Expects to find a token matching the precompiled regexp C<$re>. If provided,
+the C<$convert> CODE reference can be used to convert the string into a more
+convenient form. C<$name> is used in the failure message if the pattern fails
+to match.
+
+If provided, the C<$convert> function will be passed the parser and the
+matching substring; the value it returns is returned from C<generic_token>.
+
+ $convert->( $parser, $substr )
+
+If not provided, the substring will be returned as it stands.
+
+This method is mostly provided for subclasses to define their own token types.
+For example:
+
+ sub token_hex
+ {
+    my $self = shift;
+    $self->generic_token( hex => qr/[0-9A-F]{2}h/, sub { hex $_[1] } );
+ }
+
+=cut
+
+sub generic_token
+{
+   my $self = shift;
+   my ( $name, $re, $convert ) = @_;
+
+   $self->fail( "Expected $name" ) if $self->at_eos;
+
+   $self->skip_ws;
+   $self->{str} =~ m/\G$re/gc or
+      $self->fail( "Expected $name" );
+
+   my $match = substr( $self->{str}, $-[0], $+[0] - $-[0] );
+
+   return $convert ? $convert->( $self, $match ) : $match;
+}
+
+sub _token_generic
+{
+   my $self = shift;
+   my %args = @_;
+
+   my $name    = $args{name};
+   my $re      = $args{pattern} ? $self->{patterns}{ $args{pattern} } : $args{re};
+   my $convert = $args{convert};
+
+   $self->generic_token( $name, $re, $convert );
+}
+
 =head2 $int = $parser->token_int
 
 Expects to find an integer in decimal, octal or hexadecimal notation, and
@@ -727,20 +795,20 @@ consumes it. Negative integers, preceeded by C<->, are also recognised.
 sub token_int
 {
    my $self = shift;
+   $self->_token_generic(
+      name => "int",
 
-   $self->fail( "Expected integer" ) if $self->at_eos;
+      pattern => "int",
+      convert => sub {
+         my $int = $_[1];
+         my $sign = ( $int =~ s/^-// ) ? -1 : 1;
 
-   $self->skip_ws;
-   $self->{str} =~ m/\G(-?)($self->{patterns}{int})/gc or
-      $self->fail( "Expected integer" );
+         $int =~ s/^0o/0/;
 
-   my $sign = $1 ? -1 : 1;
-   my $int = $2;
-
-   $int =~ s/^0o/0/;
-
-   return $sign * oct $int if $int =~ m/^0/;
-   return $sign * $int;
+         return $sign * oct $int if $int =~ m/^0/;
+         return $sign * $int;
+      },
+   );
 }
 
 =head2 $float = $parser->token_float
@@ -755,14 +823,12 @@ numerical value is then returned.
 sub token_float
 {
    my $self = shift;
+   $self->_token_generic(
+      name => "float",
 
-   $self->fail( "Expected float" ) if $self->at_eos;
-
-   $self->skip_ws;
-   $self->{str} =~ m/\G(-?(?:\d*\.\d+|\d+\.)(?:e-?\d+)?|-?\d+e-?\d+)/gci or
-      $self->fail( "Expected float" );
-
-   return $1 + 0;
+      pattern => "float",
+      convert => sub { $_[1] + 0 },
+   );
 }
 
 =head2 $str = $parser->token_string
@@ -845,14 +911,11 @@ Expects to find an identifier, and consumes it.
 sub token_ident
 {
    my $self = shift;
+   $self->_token_generic(
+      name => "ident",
 
-   $self->fail( "Expected identifier" ) if $self->at_eos;
-
-   $self->skip_ws;
-   $self->{str} =~ m/\G($self->{patterns}{ident})/gc or
-      $self->fail( "Expected identifier" );
-
-   return $1;
+      pattern => "ident",
+   );
 }
 
 =head2 $keyword = $parser->token_kw( @keywords )
@@ -887,7 +950,7 @@ sub new
 {
    my $class = shift;
    my $self = bless {}, $class;
-   @{$self}{qw( message linenum col text )} = @_;
+   @{$self}{qw( message parser pos )} = @_;
    return $self;
 }
 
@@ -896,15 +959,22 @@ sub STRING
 {
    my $self = shift;
 
+   my $parser = $self->{parser};
+   my ( $linenum, $col, $text ) = $parser->where( $self->{pos} );
+
    # Column number only counts characters. There may be tabs in there.
    # Rather than trying to calculate the visual column number, just print the
    # indentation as it stands.
 
-   my $indent = substr( $self->{text}, 0, $self->{col} );
+   my $indent = substr( $text, 0, $col );
    $indent =~ s/[^ \t]/ /g; # blank out all the non-whitespace
 
-   return "$self->{message} on line $self->{linenum} at:\n" . 
-          "$self->{text}\n" . 
+   my $filename = $parser->{filename};
+   my $in_file = ( defined $filename and !ref $filename )
+                    ? "in $filename " : "";
+
+   return "$self->{message} ${in_file}on line $linenum at:\n" . 
+          "$text\n" . 
           "$indent^\n";
 }
 
@@ -954,7 +1024,10 @@ instead a C<parse_string_generic> using a loop over C<substring_before>.
 
 =item *
 
-Easy ability for subclasses to define more token types
+Easy ability for subclasses to define more token types as methods. Perhaps
+provide a class method such as
+
+ __PACKAGE__->has_token( hex => qr/[0-9A-F]+/i, sub { hex $_[1] } );
 
 =item *
 
