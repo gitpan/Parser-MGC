@@ -117,15 +117,21 @@ METHODS
     invocations may split a single token across the buffer boundaries, and
     cause parse failures.
 
+  $pos = $parser->pos
+    Returns the current parse position, as a charcter offset from the
+    beginning of the file or string.
+
   ( $lineno, $col, $text ) = $parser->where
     Returns the current parse position, as a line and column number, and the
     entire current line of text. The first line is numbered 1, and the first
     column is numbered 0.
 
   $parser->fail( $message )
+  $parser->fail_from( $pos, $message )
     Aborts the current parse attempt with the given message string. The
-    failure message will include the current line and column position, and
-    the line of input that failed.
+    failure message will include the line and column position, and the line
+    of input that failed at the current parse position, or a position
+    earlier obtained using the "pos" method.
 
   $eos = $parser->at_eos
     Returns true if the input string is at the end of the string.
@@ -350,6 +356,9 @@ TOKEN PARSING METHODS
     sequence of digits possibly prefixed by "-", possibly containing a
     decimal point, possibly followed by an exponent specified by "e"
     followed by an integer. The numerical value is then returned.
+
+  $number = $parser->token_number
+    Expects to find a number expressed in either of the above forms.
 
   $str = $parser->token_string
     Expects to find a quoted string, and consumes it. The string should be

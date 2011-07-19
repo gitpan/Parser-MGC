@@ -8,7 +8,7 @@ package Parser::MGC;
 use strict;
 use warnings;
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 use Carp;
 
@@ -247,6 +247,19 @@ sub from_reader
    return $result;
 }
 
+=head2 $pos = $parser->pos
+
+Returns the current parse position, as a charcter offset from the beginning of
+the file or string.
+
+=cut
+
+sub pos
+{
+   my $self = shift;
+   return pos $self->{str};
+}
+
 =head2 ( $lineno, $col, $text ) = $parser->where
 
 Returns the current parse position, as a line and column number, and
@@ -281,9 +294,12 @@ sub where
 
 =head2 $parser->fail( $message )
 
+=head2 $parser->fail_from( $pos, $message )
+
 Aborts the current parse attempt with the given message string. The failure
-message will include the current line and column position, and the line of
-input that failed.
+message will include the line and column position, and the line of input that
+failed at the current parse position, or a position earlier obtained using the
+C<pos> method.
 
 =cut
 
@@ -291,8 +307,14 @@ sub fail
 {
    my $self = shift;
    my ( $message ) = @_;
+   $self->fail_from( $self->pos, $message );
+}
 
-   die Parser::MGC::Failure->new( $message, $self, pos($self->{str}) );
+sub fail_from
+{
+   my $self = shift;
+   my ( $pos, $message ) = @_;
+   die Parser::MGC::Failure->new( $message, $self, $pos );
 }
 
 =head2 $eos = $parser->at_eos
@@ -829,6 +851,18 @@ sub token_float
       pattern => "float",
       convert => sub { $_[1] + 0 },
    );
+}
+
+=head2 $number = $parser->token_number
+
+Expects to find a number expressed in either of the above forms.
+
+=cut
+
+sub token_number
+{
+   my $self = shift;
+   $self->any_of( \&token_float, \&token_int );
 }
 
 =head2 $str = $parser->token_string

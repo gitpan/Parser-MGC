@@ -1,5 +1,10 @@
 Revision history for Parser-MGC
 
+0.09    CHANGES:
+         * Added ->pos accessor and ->fail_from to throw failures from other
+           locations
+         * Added ->token_number as a convenience for int or float
+
 0.08    CHANGES:
          * Give ->list_of and ->sequence_of proper failure-handling semantics
          * Added ->generic_token
