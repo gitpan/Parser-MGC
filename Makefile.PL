@@ -2,15 +2,15 @@
 use ExtUtils::MakeMaker;
 WriteMakefile
 (
-          'NAME' => 'Parser::MGC',
-          'VERSION_FROM' => 'lib/Parser/MGC.pm',
-          'PREREQ_PM' => {
-                           'File::Slurp' => 0,
-                           'File::Temp' => 0,
-                           'Test::More' => 0
-                         },
-          'INSTALLDIRS' => 'site',
-          'EXE_FILES' => [],
-          'PL_FILES' => {}
-        )
+  'NAME' => 'Parser::MGC',
+  'VERSION_FROM' => 'lib/Parser/MGC.pm',
+  'PREREQ_PM' => {
+                   'File::Slurp' => 0,
+                   'File::Temp' => 0,
+                   'Test::More' => 0
+                 },
+  'INSTALLDIRS' => 'site',
+  'EXE_FILES' => [],
+  'PL_FILES' => {}
+)
 ;

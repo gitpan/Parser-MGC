@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 5;
+use Test::More tests => 7;
 
 package TestParser;
 use base qw( Parser::MGC );
@@ -22,6 +22,17 @@ sub parse
    my $self = shift;
 
    return hex +( $self->expect( qr/0x([0-9A-F]+)/i ) )[1];
+}
+
+package FooBarParser;
+use base qw( Parser::MGC );
+
+sub parse
+{
+   my $self = shift;
+
+   return $self->maybe_expect( qr/foo/i ) ||
+          $self->maybe_expect( qr/bar/i );
 }
 
 package main;
@@ -50,3 +61,8 @@ is( $@,
 $parser = HexParser->new;
 
 is( $parser->from_string( "0x123" ), 0x123, "Hex parser captures substring" );
+
+$parser = FooBarParser->new;
+
+is( $parser->from_string( "Foo" ), "Foo", "FooBar parser first case" );
+is( $parser->from_string( "Bar" ), "Bar", "FooBar parser first case" );

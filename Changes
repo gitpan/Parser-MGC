@@ -1,5 +1,8 @@
 Revision history for Parser-MGC
 
+0.10    CHANGES:
+         * Added ->maybe_expect, for higher performance parsers
+
 0.09    CHANGES:
          * Added ->pos accessor and ->fail_from to throw failures from other
            locations

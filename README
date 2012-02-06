@@ -1,5 +1,5 @@
 NAME
-    "Parser::MGC" - build simple recursive-descent parsers
+    `Parser::MGC' - build simple recursive-descent parsers
 
 SYNOPSIS
      package My::Grammar::Parser
@@ -28,7 +28,7 @@ SYNOPSIS
 DESCRIPTION
     This base class provides a low-level framework for building
     recursive-descent parsers that consume a given input string from left to
-    right, returning a parse structure. It takes its name from the "m//gc"
+    right, returning a parse structure. It takes its name from the `m//gc'
     regexps used to implement the token parsing behaviour.
 
     It provides a number of token-parsing methods, which each extract a
@@ -41,69 +41,63 @@ DESCRIPTION
 
 CONSTRUCTOR
   $parser = Parser::MGC->new( %args )
-    Returns a new instance of a "Parser::MGC" object. This must be called on
-    a subclass that provides a "parse" method.
+    Returns a new instance of a `Parser::MGC' object. This must be called on
+    a subclass that provides a `parse' method.
 
     Takes the following named arguments
 
     patterns => HASH
-            Keys in this hash should map to quoted regexp ("qr//")
+            Keys in this hash should map to quoted regexp (`qr//')
             references, to override the default patterns used to match
-            tokens. See "PATTERNS" below
+            tokens. See `PATTERNS' below
 
     accept_0o_oct => BOOL
-            If true, the "token_int" method will also accept integers with a
-            "0o" prefix as octal.
+            If true, the `token_int' method will also accept integers with a
+            `0o' prefix as octal.
 
 PATTERNS
     The following pattern names are recognised. They may be passed to the
-    constructor in the "patterns" hash, or provided as a class method under
-    the name "pattern_*name*".
+    constructor in the `patterns' hash, or provided as a class method under
+    the name `pattern_*name*'.
 
-    *   ws
-
+    * ws
         Pattern used to skip whitespace between tokens. Defaults to
-        "/[\s\n\t]+/"
+        `/[\s\n\t]+/'
 
-    *   comment
-
+    * comment
         Pattern used to skip comments between tokens. Undefined by default.
 
-    *   int
+    * int
+        Pattern used to parse an integer by `token_int'. Defaults to
+        `/-?(?:0x[[:xdigit:]]+|[[:digit:]]+)/'. If `accept_0o_oct' is given,
+        then this will be expanded to match `/0o[0-7]+/' as well.
 
-        Pattern used to parse an integer by "token_int". Defaults to
-        "/-?(?:0x[[:xdigit:]]+|[[:digit:]]+)/". If "accept_0o_oct" is given,
-        then this will be expanded to match "/0o[0-7]+/" as well.
+    * float
+        Pattern used to parse a floating-point number by `token_float'.
+        Defaults to `/-?(?:\d*\.\d+|\d+\.)(?:e-?\d+)?|-?\d+e-?\d+/i'.
 
-    *   float
+    * ident
+        Pattern used to parse an identifier by `token_ident'. Defaults to
+        `/[[:alpha:]_]\w*/'
 
-        Pattern used to parse a floating-point number by "token_float".
-        Defaults to "/-?(?:\d*\.\d+|\d+\.)(?:e-?\d+)?|-?\d+e-?\d+/i".
-
-    *   ident
-
-        Pattern used to parse an identifier by "token_ident". Defaults to
-        "/[[:alpha:]_]\w*/"
-
-    *   string_delim
-
-        Pattern used to delimit a string by "token_string". Defaults to
-        "/["']/".
+    * string_delim
+        Pattern used to delimit a string by `token_string'. Defaults to
+        `/["']/'.
 
 METHODS
   $result = $parser->from_string( $str )
-    Parse the given literal string and return the result from the "parse"
+    Parse the given literal string and return the result from the `parse'
     method.
 
   $result = $parser->from_file( $file )
     Parse the given file, which may be a pathname in a string, or an opened
-    IO handle, and return the result from the "parse" method.
+    IO handle, and return the result from the `parse' method.
 
   $result = $parser->from_reader( \&reader )
-    Parse the input which is read by the "reader" function. This function
+    Parse the input which is read by the `reader' function. This function
     will be called in scalar context to generate portions of string to
-    parse, being passed the $parser object. The function should return
-    "undef" when it has no more string to return.
+    parse, being passed the `$parser' object. The function should return
+    `undef' when it has no more string to return.
 
      $reader->( $parser )
 
@@ -118,7 +112,7 @@ METHODS
     cause parse failures.
 
   $pos = $parser->pos
-    Returns the current parse position, as a charcter offset from the
+    Returns the current parse position, as a character offset from the
     beginning of the file or string.
 
   ( $lineno, $col, $text ) = $parser->where
@@ -131,28 +125,28 @@ METHODS
     Aborts the current parse attempt with the given message string. The
     failure message will include the line and column position, and the line
     of input that failed at the current parse position, or a position
-    earlier obtained using the "pos" method.
+    earlier obtained using the `pos' method.
 
   $eos = $parser->at_eos
     Returns true if the input string is at the end of the string.
 
   $level = $parser->scope_level
-    Returns the number of nested "scope_of" calls that have been made.
+    Returns the number of nested `scope_of' calls that have been made.
 
 STRUCTURE-FORMING METHODS
     The following methods may be used to build a grammatical structure out
     of the defined basic token-parsing methods. Each takes at least one code
-    reference, which will be passed the actual $parser object as its first
+    reference, which will be passed the actual `$parser' object as its first
     argument.
 
   $ret = $parser->maybe( $code )
-    Attempts to execute the given $code reference in scalar context, and
+    Attempts to execute the given `$code' reference in scalar context, and
     returns what it returned. If the code fails to parse by calling the
-    "fail" method then none of the input string will be consumed; the
-    current parsing position will be restored. "undef" will be returned in
+    `fail' method then none of the input string will be consumed; the
+    current parsing position will be restored. `undef' will be returned in
     this case.
 
-    This may be considered to be similar to the "?" regexp qualifier.
+    This may be considered to be similar to the `?' regexp qualifier.
 
      sub parse_declaration
      {
@@ -168,13 +162,13 @@ STRUCTURE-FORMING METHODS
      }
 
   $ret = $parser->scope_of( $start, $code, $stop )
-    Expects to find the $start pattern, then attempts to execute the given
-    $code reference, then expects to find the $stop pattern. Returns
+    Expects to find the `$start' pattern, then attempts to execute the given
+    `$code' reference, then expects to find the `$stop' pattern. Returns
     whatever the code reference returned.
 
-    While the code is being executed, the $stop pattern will be used by the
-    token parsing methods as an end-of-scope marker; causing them to raise a
-    failure if called at the end of a scope.
+    While the code is being executed, the `$stop' pattern will be used by
+    the token parsing methods as an end-of-scope marker; causing them to
+    raise a failure if called at the end of a scope.
 
      sub parse_block
      {
@@ -183,7 +177,7 @@ STRUCTURE-FORMING METHODS
         $self->scope_of( "{", sub { $self->parse_statements }, "}" );
      }
 
-    If the $start pattern is undefined, it is presumed the caller has
+    If the `$start' pattern is undefined, it is presumed the caller has
     already checked for this. This is useful when the stop pattern needs to
     be calculated based on the start pattern.
 
@@ -198,9 +192,9 @@ STRUCTURE-FORMING METHODS
      }
 
   $ret = $parser->list_of( $sep, $code )
-    Expects to find a list of instances of something parsed by $code,
-    separated by the $sep pattern. Returns an ARRAY ref containing a list of
-    the return values from the $code.
+    Expects to find a list of instances of something parsed by `$code',
+    separated by the `$sep' pattern. Returns an ARRAY ref containing a list
+    of the return values from the `$code'.
 
     This method does not consider it an error if the returned list is empty;
     that is, that the scope ended before any item instances were parsed from
@@ -214,11 +208,11 @@ STRUCTURE-FORMING METHODS
      }
 
   $ret = $parser->sequence_of( $code )
-    A shortcut for calling "list_of" with an empty string as separator;
-    expects to find at least one instance of something parsed by $code,
+    A shortcut for calling `list_of' with an empty string as separator;
+    expects to find at least one instance of something parsed by `$code',
     separated only by skipped whitespace.
 
-    This may be considered to be similar to the "+" or "*" regexp
+    This may be considered to be similar to the `+' or `*' regexp
     qualifiers.
 
      sub parse_statements
@@ -231,9 +225,9 @@ STRUCTURE-FORMING METHODS
   $ret = $parser->any_of( @codes )
     Expects that one of the given code references can parse something from
     the input, returning what it returned. Each code reference may indicate
-    a failure to parse by calling the "fail" method.
+    a failure to parse by calling the `fail' method.
 
-    This may be considered to be similar to the "|" regexp operator for
+    This may be considered to be similar to the `|' regexp operator for
     forming alternations of possible parse trees.
 
      sub parse_statement
@@ -247,17 +241,17 @@ STRUCTURE-FORMING METHODS
         );
      }
 
-    Note: This method used to be called "one_of", but was renamed for
+    Note: This method used to be called `one_of', but was renamed for
     clarity. Currently this method is provided also as an alias by the old
-    name. Code using the old name should be rewritten to "any_of" instead,
+    name. Code using the old name should be rewritten to `any_of' instead,
     as this backward-compatibility alias may be removed in a later version.
 
   $parser->commit
     Calling this method will cancel the backtracking behaviour of the
-    innermost "maybe", "list_of", "sequence_of", or "any_of" structure
-    forming method. That is, if later code then calls "fail", the exception
-    will be propagated out of "maybe", and no further code blocks will be
-    attempted by "any_of".
+    innermost `maybe', `list_of', `sequence_of', or `any_of' structure
+    forming method. That is, if later code then calls `fail', the exception
+    will be propagated out of `maybe', and no further code blocks will be
+    attempted by `any_of'.
 
     Typically this will be called once the grammatical structure of an
     alternation has been determined, ensuring that any further failures are
@@ -289,11 +283,17 @@ TOKEN PARSING METHODS
     In list context it returns the matching substring and the contents of
     any subgroups contained in the pattern.
 
-    This method will raise a parse error (by calling "fail") if the regexp
+    This method will raise a parse error (by calling `fail') if the regexp
     fails to match. Note that if the pattern could match an empty string
-    (such as for example "qr/\d*/"), the pattern will always match, even if
+    (such as for example `qr/\d*/'), the pattern will always match, even if
     it has to match an empty string. This method will not consider a failure
     if the regexp matches with zero-width.
+
+  $str = $parser->maybe_expect( ... )
+  @groups = $parser->maybe_expect( ... )
+    A convenient shortcut equivalent to calling `expect' within `maybe', but
+    implemented more efficiently, avoiding the exception-handling set up by
+    `maybe'. Returns `undef' or an empty list if the match fails.
 
   $str = $parser->substring_before( $literal )
   $str = $parser->substring_before( qr/pattern/ )
@@ -304,7 +304,7 @@ TOKEN PARSING METHODS
 
     This method does not consume the part of input that matches, only the
     text before it. It is not considered a failure if the substring before
-    this match is empty. If a non-empty match is required, use the "fail"
+    this match is empty. If a non-empty match is required, use the `fail'
     method:
 
      sub token_nonempty_part
@@ -324,14 +324,14 @@ TOKEN PARSING METHODS
     be preserved.
 
   $val = $parser->generic_token( $name, $re, $convert )
-    Expects to find a token matching the precompiled regexp $re. If
-    provided, the $convert CODE reference can be used to convert the string
-    into a more convenient form. $name is used in the failure message if the
-    pattern fails to match.
+    Expects to find a token matching the precompiled regexp `$re'. If
+    provided, the `$convert' CODE reference can be used to convert the
+    string into a more convenient form. `$name' is used in the failure
+    message if the pattern fails to match.
 
-    If provided, the $convert function will be passed the parser and the
+    If provided, the `$convert' function will be passed the parser and the
     matching substring; the value it returns is returned from
-    "generic_token".
+    `generic_token'.
 
      $convert->( $parser, $substr )
 
@@ -348,13 +348,13 @@ TOKEN PARSING METHODS
 
   $int = $parser->token_int
     Expects to find an integer in decimal, octal or hexadecimal notation,
-    and consumes it. Negative integers, preceeded by "-", are also
+    and consumes it. Negative integers, preceeded by `-', are also
     recognised.
 
   $float = $parser->token_float
     Expects to find a number expressed in floating-point notation; a
-    sequence of digits possibly prefixed by "-", possibly containing a
-    decimal point, possibly followed by an exponent specified by "e"
+    sequence of digits possibly prefixed by `-', possibly containing a
+    decimal point, possibly followed by an exponent specified by `e'
     followed by an integer. The numerical value is then returned.
 
   $number = $parser->token_number
@@ -362,7 +362,7 @@ TOKEN PARSING METHODS
 
   $str = $parser->token_string
     Expects to find a quoted string, and consumes it. The string should be
-    quoted using """ or "'" quote marks.
+    quoted using `"' or `'' quote marks.
 
     The content of the quoted string can contain character escapes similar
     to those accepted by C or Perl. Specifically, the following forms are
@@ -378,8 +378,8 @@ TOKEN PARSING METHODS
      \0, \012         Octal character
      \x34, \x{5678}   Hexadecimal character
 
-    C's "\v" for vertical tab is not supported as it is rarely used in
-    practice and it collides with Perl's "\v" regexp escape. Perl's "\c" for
+    C's `\v' for vertical tab is not supported as it is rarely used in
+    practice and it collides with Perl's `\v' regexp escape. Perl's `\c' for
     forming other control characters is also not supported.
 
   $ident = $parser->token_ident
@@ -394,7 +394,7 @@ EXAMPLES
     Although the structure-forming methods all return a value, obtained from
     their nested parsing code, it can sometimes be more convenient to use a
     variable to accumulate a result in instead. For example, consider the
-    following parser method, designed to parse a set of "name: "value""
+    following parser method, designed to parse a set of `name: "value"'
     assignments, such as might be found in a configuration file, or
     YAML/JSON-style mapping value.
 
@@ -415,22 +415,22 @@ EXAMPLES
         return \%ret
      }
 
-    Instead of using the return value from "list_of", this method
-    accumulates values in the %ret hash, eventually returning a reference to
-    it as its result. Because of this, it can perform some error checking
+    Instead of using the return value from `list_of', this method
+    accumulates values in the `%ret' hash, eventually returning a reference
+    to it as its result. Because of this, it can perform some error checking
     while it parses; namely, rejecting duplicate keys.
 
 TODO
     *   Make unescaping of string constants more customisable. Possibly
-        consider instead a "parse_string_generic" using a loop over
-        "substring_before".
+        consider instead a `parse_string_generic' using a loop over
+        `substring_before'.
 
     *   Easy ability for subclasses to define more token types as methods.
         Perhaps provide a class method such as
 
          __PACKAGE__->has_token( hex => qr/[0-9A-F]+/i, sub { hex $_[1] } );
 
-    *   Investigate how well "from_reader" can cope with buffer splitting
+    *   Investigate how well `from_reader' can cope with buffer splitting
         across other tokens than simply skippable whitespace
 
 AUTHOR

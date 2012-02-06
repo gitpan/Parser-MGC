@@ -1,14 +1,14 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2010-2011 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2010-2012 -- leonerd@leonerd.org.uk
 
 package Parser::MGC;
 
 use strict;
 use warnings;
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 use Carp;
 
@@ -249,8 +249,8 @@ sub from_reader
 
 =head2 $pos = $parser->pos
 
-Returns the current parse position, as a charcter offset from the beginning of
-the file or string.
+Returns the current parse position, as a character offset from the beginning
+of the file or string.
 
 =cut
 
@@ -681,7 +681,29 @@ example C<qr/\d*/>), the pattern will always match, even if it has to match an
 empty string. This method will not consider a failure if the regexp matches
 with zero-width.
 
+=head2 $str = $parser->maybe_expect( ... )
+
+=head2 @groups = $parser->maybe_expect( ... )
+
+A convenient shortcut equivalent to calling C<expect> within C<maybe>, but
+implemented more efficiently, avoiding the exception-handling set up by
+C<maybe>. Returns C<undef> or an empty list if the match fails.
+
 =cut
+
+sub maybe_expect
+{
+   my $self = shift;
+   my ( $expect ) = @_;
+
+   ref $expect or $expect = qr/\Q$expect/;
+
+   $self->skip_ws;
+   $self->{str} =~ m/\G$expect/gc or return;
+
+   return substr( $self->{str}, $-[0], $+[0]-$-[0] ) if !wantarray;
+   return map { substr( $self->{str}, $-[$_], $+[$_]-$-[$_] ) } 0 .. $#+;
+}
 
 sub expect
 {
@@ -690,12 +712,16 @@ sub expect
 
    ref $expect or $expect = qr/\Q$expect/;
 
-   $self->skip_ws;
-   $self->{str} =~ m/\G$expect/gc or
-      $self->fail( "Expected $expect" );
-
-   return substr( $self->{str}, $-[0], $+[0]-$-[0] ) if !wantarray;
-   return map { substr( $self->{str}, $-[$_], $+[$_]-$-[$_] ) } 0 .. $#+;
+   if( wantarray ) {
+      my @ret = $self->maybe_expect( $expect ) or
+         $self->fail( "Expected $expect" );
+      return @ret;
+   }
+   else {
+      defined( my $ret = $self->maybe_expect( $expect ) ) or
+         $self->fail( "Expected $expect" );
+      return $ret;
+   }
 }
 
 =head2 $str = $parser->substring_before( $literal )
