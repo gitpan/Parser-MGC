@@ -1,5 +1,10 @@
 Revision history for Parser-MGC
 
+0.11    CHANGES:
+         * Allow different toplevel parse methods to the constructor
+         * Added another example showing parsing XML - only a minimal example;
+           do not use this as real code. :)
+
 0.10    CHANGES:
          * Added ->maybe_expect, for higher performance parsers
 

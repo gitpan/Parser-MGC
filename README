@@ -42,9 +42,14 @@ DESCRIPTION
 CONSTRUCTOR
   $parser = Parser::MGC->new( %args )
     Returns a new instance of a `Parser::MGC' object. This must be called on
-    a subclass that provides a `parse' method.
+    a subclass that provides method of the name provided as `toplevel', by
+    default called `parse'.
 
     Takes the following named arguments
+
+    toplevel => STRING
+            Name of the toplevel method to use to start the parse from. If
+            not supplied, will try to use a method called `parse'.
 
     patterns => HASH
             Keys in this hash should map to quoted regexp (`qr//')
@@ -86,12 +91,12 @@ PATTERNS
 
 METHODS
   $result = $parser->from_string( $str )
-    Parse the given literal string and return the result from the `parse'
+    Parse the given literal string and return the result from the toplevel
     method.
 
   $result = $parser->from_file( $file )
     Parse the given file, which may be a pathname in a string, or an opened
-    IO handle, and return the result from the `parse' method.
+    IO handle, and return the result from the toplevel method.
 
   $result = $parser->from_reader( \&reader )
     Parse the input which is read by the `reader' function. This function

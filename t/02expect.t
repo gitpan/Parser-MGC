@@ -7,27 +7,21 @@ use Test::More tests => 7;
 package TestParser;
 use base qw( Parser::MGC );
 
-sub parse
+sub parse_hello
 {
    my $self = shift;
 
    [ $self->expect( "hello" ), $self->expect( qr/world/ ) ];
 }
 
-package HexParser;
-use base qw( Parser::MGC );
-
-sub parse
+sub parse_hex
 {
    my $self = shift;
 
    return hex +( $self->expect( qr/0x([0-9A-F]+)/i ) )[1];
 }
 
-package FooBarParser;
-use base qw( Parser::MGC );
-
-sub parse
+sub parse_foo_or_bar
 {
    my $self = shift;
 
@@ -37,7 +31,7 @@ sub parse
 
 package main;
 
-my $parser = TestParser->new;
+my $parser = TestParser->new( toplevel => "parse_hello" );
 
 is_deeply( $parser->from_string( "hello world" ),
    [ "hello", "world" ],
@@ -58,11 +52,11 @@ is( $@,
    qq[^\n],
    'Exception from "goodbye world" failure' );
 
-$parser = HexParser->new;
+$parser = TestParser->new( toplevel => "parse_hex" );
 
 is( $parser->from_string( "0x123" ), 0x123, "Hex parser captures substring" );
 
-$parser = FooBarParser->new;
+$parser = TestParser->new( toplevel => "parse_foo_or_bar" );
 
 is( $parser->from_string( "Foo" ), "Foo", "FooBar parser first case" );
 is( $parser->from_string( "Bar" ), "Bar", "FooBar parser first case" );

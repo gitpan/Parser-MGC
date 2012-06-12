@@ -4,6 +4,7 @@ examples/eval-expr.pl
 examples/LICENSE
 examples/parse-dict.pl
 examples/parse-pod.pl
+examples/parse-xml.pl
 examples/synopsis.pl
 lib/Parser/MGC.pm
 LICENSE
@@ -38,5 +39,6 @@ t/90ex_dict.t
 t/90ex_expr.t
 t/90ex_pod.t
 t/90ex_synopsis.t
+t/90ex_xml.t
 t/98backcompat.t
 t/99pod.t

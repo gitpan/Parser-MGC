@@ -8,7 +8,7 @@ package Parser::MGC;
 use strict;
 use warnings;
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 use Carp;
 
@@ -67,11 +67,17 @@ grammars that require backtracking.
 =head2 $parser = Parser::MGC->new( %args )
 
 Returns a new instance of a C<Parser::MGC> object. This must be called on a
-subclass that provides a C<parse> method.
+subclass that provides method of the name provided as C<toplevel>, by default
+called C<parse>.
 
 Takes the following named arguments
 
 =over 8
+
+=item toplevel => STRING
+
+Name of the toplevel method to use to start the parse from. If not supplied,
+will try to use a method called C<parse>.
 
 =item patterns => HASH
 
@@ -148,10 +154,13 @@ sub new
    my $class = shift;
    my %args = @_;
 
-   $class->can( "parse" ) or
-      croak "Expected to be a subclass that can ->parse";
+   my $toplevel = $args{toplevel} || "parse";
+
+   $class->can( $toplevel ) or
+      croak "Expected to be a subclass that can ->$toplevel";
 
    my $self = bless {
+      toplevel => $toplevel,
       patterns => {},
       scope_level => 0,
    }, $class;
@@ -171,7 +180,7 @@ sub new
 
 =head2 $result = $parser->from_string( $str )
 
-Parse the given literal string and return the result from the C<parse> method.
+Parse the given literal string and return the result from the toplevel method.
 
 =cut
 
@@ -184,7 +193,8 @@ sub from_string
 
    pos $self->{str} = 0;
 
-   my $result = $self->parse;
+   my $toplevel = $self->{toplevel};
+   my $result = $self->$toplevel;
 
    $self->at_eos or
       $self->fail( "Expected end of input" );
@@ -195,7 +205,7 @@ sub from_string
 =head2 $result = $parser->from_file( $file )
 
 Parse the given file, which may be a pathname in a string, or an opened IO
-handle, and return the result from the C<parse> method.
+handle, and return the result from the toplevel method.
 
 =cut
 
@@ -327,6 +337,7 @@ sub at_eos
 {
    my $self = shift;
 
+   # Save pos() before skipping ws so we don't break the substring_before method
    my $pos = pos $self->{str};
 
    $self->skip_ws;
