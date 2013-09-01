@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 1;
+use Test::More;
 
 package TestParser;
 use base qw( Parser::MGC );
@@ -30,3 +31,5 @@ my @strings = (
 is_deeply( $parser->from_reader( sub { return shift @strings } ),
    [qw( here is a list of some more tokens )],
    'tokens from reader' );
+
+done_testing;

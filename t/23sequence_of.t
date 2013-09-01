@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 6;
+use Test::More;
 
 package TestParser;
 use base qw( Parser::MGC );
@@ -52,3 +53,5 @@ is_deeply( $parser->from_string( "10 20" ),
 
 is_deeply( $parser->from_string( "'ab' 'cd'" ),
            [ [], [ 'ab', 'cd' ] ], q("'ab' 'cd'") );
+
+done_testing;

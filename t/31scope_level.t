@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 3;
+use Test::More;
 
 package TestParser;
 use base qw( Parser::MGC );
@@ -28,3 +29,5 @@ my $parser = TestParser->new;
 is_deeply( $parser->from_string( "a" ), [ "a/0" ], 'a' );
 is_deeply( $parser->from_string( "(b)" ), [ [ "b/1" ] ], '(b)' );
 is_deeply( $parser->from_string( "c (d) e" ), [ "c/0", [ "d/1" ], "e/0" ], 'c (d) e' );
+
+done_testing;

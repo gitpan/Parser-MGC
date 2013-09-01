@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 4;
+use Test::More;
 
 require "examples/parse-dict.pl";
 
@@ -30,3 +31,5 @@ test q[{one: 1, two: 2}],
 test q[{numbers: {three: 3, four: 4}}],
      { numbers => { three => 3, four => 4 } },
      "Nested dict";
+
+done_testing;

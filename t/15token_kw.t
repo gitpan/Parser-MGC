@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 3;
+use Test::More;
 
 package TestParser;
 use base qw( Parser::MGC );
@@ -26,3 +27,5 @@ is( $@,
    qq[splot\n] .
    qq[^\n],
    'Exception from "splot" failure' );
+
+done_testing;

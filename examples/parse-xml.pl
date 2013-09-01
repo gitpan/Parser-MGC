@@ -58,7 +58,6 @@ sub parse_element
 
    $self->commit;
 
-   my $node = bless [ node => $tag->{name}, $tag->{attrs} ], "XmlParser::Node";
    return XmlParser::Node::Element->new( $tag->{name}, $tag->{attrs} ) if $tag->{selfclose};
 
    my $childlist = $self->sequence_of( \&parse_node );
@@ -76,14 +75,14 @@ sub parse_tag
    $self->expect( '<' );
    my $tagname = $self->token_ident;
 
-   my @attrs = @{ $self->sequence_of( \&parse_tag_attr ) };
+   my $attrs = $self->sequence_of( \&parse_tag_attr );
 
    my $selfclose = $self->maybe_expect( '/' );
    $self->expect( '>' );
 
    return {
       name  => $tagname,
-      attrs => { map { ( $_->[0], $_->[1] ) } @attrs },
+      attrs => { map { ( $_->[0], $_->[1] ) } @$attrs },
       selfclose => $selfclose,
    };
 }

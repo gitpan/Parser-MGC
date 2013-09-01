@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 12;
+use Test::More;
 
 my @positions;
 my @wheres;
@@ -57,3 +58,5 @@ $parser->from_string( "hello world" );
    [ 1, 5, "hello" ],
    [ 2, 5, "world" ], );
 $parser->from_string( "hello\nworld" );
+
+done_testing;

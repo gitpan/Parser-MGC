@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 13;
+use Test::More;
 
 package TestParser;
 use base qw( Parser::MGC );
@@ -43,3 +44,5 @@ approx( $parser->from_string( "50E-1" ),   5, 'Scientific with negative exponent
 approx( $parser->from_string( "60.0E-1" ), 6, 'Scientific with DP with negative exponent' );
 
 approx( $parser->from_string( "1e0" ), 1, 'Scientific with lowercase e' );
+
+done_testing;

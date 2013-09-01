@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 6;
+use Test::More;
 
 package TestParser;
 use base qw( Parser::MGC );
@@ -36,3 +37,5 @@ $parser = TestParser->new(
 );
 
 is( $parser->from_string( "some-ident" ), "some-ident", '"some-ident" passes with new token pattern' );
+
+done_testing;

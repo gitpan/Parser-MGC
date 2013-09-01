@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 6;
+use Test::More;
 
 package TestParser;
 use base qw( Parser::MGC );
@@ -31,3 +32,5 @@ ok( !eval { $parser->from_string( "@" ) }, '"@" fails' );
 is( $@, "Here I fail\n", 'Exception from "@" failure' );
 
 ok( !eval { $parser->from_string( "+" ) }, '"+" fails' );
+
+done_testing;

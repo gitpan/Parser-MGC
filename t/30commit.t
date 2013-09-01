@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 7;
+use Test::More;
 
 package TestParser;
 use base qw( Parser::MGC );
@@ -67,3 +68,5 @@ is( $@,
     qq[1 'one' 2\n].
     qq[         ^\n],
     'Exception from 1 \'one\' 2 failure' );
+
+done_testing;

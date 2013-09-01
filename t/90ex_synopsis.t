@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 4;
+use Test::More;
 
 require "examples/synopsis.pl";
 
@@ -19,3 +20,5 @@ test "123", 123;
 test "'hello'", 'hello';
 test "(123 456)", [ 123, 456 ];
 test "(+ 1 (* 2 3))", [ \'+', 1, [ \'*', 2, 3 ] ];
+
+done_testing;

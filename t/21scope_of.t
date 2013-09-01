@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 6;
+use Test::More;
 
 package TestParser;
 use base qw( Parser::MGC );
@@ -50,3 +51,5 @@ is( $parser->from_string( "(45)" ), 45, '"(45)"' );
 is( $parser->from_string( "[45]" ), 45, '"[45]"' );
 
 ok( !eval { $parser->from_string( "(45]" ) }, '"(45]" fails' );
+
+done_testing;

@@ -1,5 +1,12 @@
 Revision history for Parser-MGC
 
+0.12    2013/09/01 01:30:13
+        [CHANGES]
+         * Ensure that ->expect / ->maybe_expect with optional capture groups
+           don't yield warnings (thanks BP Jonsson)
+         * Allow setting binmode for ->from_file
+         * Slightly neater examples/parse-xml.pl
+
 0.11    CHANGES:
          * Allow different toplevel parse methods to the constructor
          * Added another example showing parsing XML - only a minimal example;

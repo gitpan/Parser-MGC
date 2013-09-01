@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 9;
+use Test::More;
 use File::Temp qw( tempfile );
 
 package TestParser;
@@ -52,6 +53,8 @@ is( $@,
     qq[ 123.\n].
     qq[    ^\n],
     'Exception from trailing input on named file' );
+
+done_testing;
 
 __DATA__
  123.

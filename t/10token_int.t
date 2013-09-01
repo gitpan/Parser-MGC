@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 8;
+use Test::More;
 
 package TestParser;
 use base qw( Parser::MGC );
@@ -30,3 +31,5 @@ ok( !eval { $parser->from_string( "hello" ) }, '"hello" fails' );
 
 $parser = TestParser->new( accept_0o_oct => 1 );
 is( $parser->from_string( "0o20" ), 16, 'Octal integer with 0o prefix' );
+
+done_testing;

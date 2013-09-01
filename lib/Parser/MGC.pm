@@ -8,7 +8,7 @@ package Parser::MGC;
 use strict;
 use warnings;
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 use Carp;
 
@@ -202,21 +202,34 @@ sub from_string
    return $result;
 }
 
-=head2 $result = $parser->from_file( $file )
+=head2 $result = $parser->from_file( $file, %opts )
 
 Parse the given file, which may be a pathname in a string, or an opened IO
 handle, and return the result from the toplevel method.
+
+The following options are recognised:
+
+=over 8
+
+=item binmode => STRING
+
+If set, applies the given binmode to the filehandle before reading. Typically
+this can be used to set the encoding of the file.
+
+ $parser->from_file( $file, binmode => ":encoding(UTF-8)" )
+
+=back
 
 =cut
 
 sub from_file
 {
    my $self = shift;
-   my ( $filename ) = @_;
+   my ( $filename, %opts ) = @_;
 
    $self->{filename} = $filename;
 
-   $self->from_string( scalar(slurp $filename) );
+   $self->from_string( scalar( slurp $filename, binmode => $opts{binmode} ) );
 }
 
 =head2 $result = $parser->from_reader( \&reader )
@@ -713,7 +726,7 @@ sub maybe_expect
    $self->{str} =~ m/\G$expect/gc or return;
 
    return substr( $self->{str}, $-[0], $+[0]-$-[0] ) if !wantarray;
-   return map { substr( $self->{str}, $-[$_], $+[$_]-$-[$_] ) } 0 .. $#+;
+   return map { defined $-[$_] ? substr( $self->{str}, $-[$_], $+[$_]-$-[$_] ) : undef } 0 .. $#+;
 }
 
 sub expect

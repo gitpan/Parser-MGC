@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 18;
+use Test::More;
 
 package TestParser;
 use base qw( Parser::MGC );
@@ -61,3 +62,5 @@ $parser = StringPairParser->new;
 is_deeply( $parser->from_string( q["foo" "bar"] ),
            [ "foo", "bar" ],
            'String-matching pattern is non-greedy' );
+
+done_testing;

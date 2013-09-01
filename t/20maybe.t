@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 4;
+use Test::More;
 
 my $die;
 
@@ -30,3 +31,5 @@ is( $parser->from_string( "123" ), 123, '"123"' );
 $die = "Now have to fail\n";
 ok( !eval { $parser->from_string( "456" ) }, '"456" with $die fails' );
 is( $@, "Now have to fail\n", 'Exception from failure' );
+
+done_testing;

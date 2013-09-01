@@ -94,9 +94,18 @@ METHODS
     Parse the given literal string and return the result from the toplevel
     method.
 
-  $result = $parser->from_file( $file )
+  $result = $parser->from_file( $file, %opts )
     Parse the given file, which may be a pathname in a string, or an opened
     IO handle, and return the result from the toplevel method.
+
+    The following options are recognised:
+
+    binmode => STRING
+            If set, applies the given binmode to the filehandle before
+            reading. Typically this can be used to set the encoding of the
+            file.
+
+             $parser->from_file( $file, binmode => ":encoding(UTF-8)" )
 
   $result = $parser->from_reader( \&reader )
     Parse the input which is read by the `reader' function. This function

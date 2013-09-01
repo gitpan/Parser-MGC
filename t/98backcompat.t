@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 2;
+use Test::More;
 
 package OneOfParser;
 use base qw( Parser::MGC );
@@ -23,3 +24,5 @@ my $parser = OneOfParser->new;
 
 is_deeply( $parser->from_string( "123" ), [ int => 123 ], 'one_of integer' );
 is_deeply( $parser->from_string( q["hi"] ), [ str => "hi" ], 'one_of string' );
+
+done_testing;

@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 2;
+use Test::More;
 
 package TestParser;
 use base qw( Parser::MGC );
@@ -25,3 +26,5 @@ is_deeply( $parser->from_string( "Hello, world!" ),
 is_deeply( $parser->from_string( "!" ),
    [ "", "!" ],
    '"Hello, world!"' );
+
+done_testing;

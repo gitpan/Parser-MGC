@@ -1,6 +1,7 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use Test::More tests => 5;
 
@@ -37,3 +38,5 @@ test q[<xml><first>Hello</first> <second>world</second></xml>],
 test q[<xml><node a1="v1" a2="v2" /></xml>],
      [ elem(node => { a1 => "v1", a2 => "v2" }) ],
      "Node with attrs";
+
+done_testing;

@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 4;
+use Test::More;
 
 package TestParser;
 use base qw( Parser::MGC );
@@ -30,3 +31,5 @@ $parser = TestParser->new(
 );
 
 ok( $parser->from_string( "hello\n# Comment\nworld" ), '"hello world" with comment passes' );
+
+done_testing;

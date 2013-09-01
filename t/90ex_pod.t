@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 5;
+use Test::More;
 
 require "examples/parse-pod.pl";
 
@@ -34,3 +35,5 @@ test "Nested B<I<tags>>",
 test "Double C<< Class->method >> tags",
      [ "Double ", { C => [ " Class->method " ] }, " tags" ],
      "Double tags";
+
+done_testing;

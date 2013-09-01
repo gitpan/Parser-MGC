@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 4;
+use Test::More;
 
 package TestParser;
 use base qw( Parser::MGC );
@@ -30,3 +31,5 @@ is( $parser->from_string( "Hello" ), "Hello", 'RE with flags' );
 
 $convert = sub { lc $_[1] };
 is( $parser->from_string( "Hello" ), "hello", 'Conversion function' );
+
+done_testing;
